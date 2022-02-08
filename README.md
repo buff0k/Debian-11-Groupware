@@ -87,12 +87,217 @@ FLUSH PRIVILEGES;
 quit
 ```
 
-## Configure Apache Webserver
+## Configure Apache Webserver and get a LetsEncrypt SSL Certificate
 
 Eventually I would like to move over to NginX for this, however deploying on Apache is easier at a small perormance cost and will work fine for our purposes until I can figure out the NginX recipe for the same deployment.
 
- Enable required Apache modules
+ 1. Enable required Apache modules
  
  ```bash
-a2enmod ssl rewrite headers proxy proxy_http
-```
+ a2enmod ssl rewrite headers proxy proxy_http
+ ```
+
+ 2. Disable the Apache default site
+
+ ```bash
+ a2dissite 000-default.conf
+ ```
+ 
+ 3. Remove the Apache default site config file
+
+ ```bash
+ rm /etc/apache2/sites-available/*.conf
+ ```
+ 
+ 4. Create the intial config for the new apache2 site (we are using the fqdn of the mailserver, mail.example.org, feel free to use your own fqdn, the only thing that actually matters is that it is in the right folder and ends as .conf
+
+ ```bash
+ nano /etc/apache2/sites-available/mail.example.org-http.conf
+ ```
+ 
+ Make sure that the contents look like this:
+ 
+ ```bash
+ <VirtualHost *:80>
+   ServerName mail.example.org
+   DocumentRoot /var/www/html
+  </VirtualHost>
+  ```
+  
+ 5. Enable your newly created site:
+
+ ```bash
+ a2ensite mail.example.org
+ ```
+ 
+ 6. Restart Apache:
+
+ ```bash
+ systemctl restart apache2
+ ```
+ 
+ 7. Get your SSL Certificate from LetsEncrypt:
+
+ ```bash
+ certbot certonly --webroot --webroot-path /var/www/html -d owlery.hrcity.co.za --agree-tos --email admin@hrcity.co.za
+ ```
+ 
+ 8. Give the apache user (www-data) access to the certificates, this is necessary to address a known bug with PostfixAdmin:
+
+ ```bash
+ usermod -aG dovecot www-data
+ chown www-data:www-data /etc/letsencrypt/live/mail.example.org/privkey.pem 
+ chown www-data:www-data /etc/letsencrypt/live 
+ chown www-data:www-data /etc/letsencrypt/archive
+ ```
+ 
+ 9. Configure Certbot to restart the mailserver stach whenever the certificate is updated:
+
+ ```bash
+ nano /etc/letsencrypt/cli.ini
+ ```
+ Add the following to the end of the file:
+ 
+ ```bash
+ post-hook = systemctl restart postfix dovecot apache2
+ ```
+ 
+ 10. Make a autoconfig-mail file (Works with Mozilla Thunderbird), if nothing else, to give you a reference when deploying users. Make a note of the contents of this file as well, these are the IMAP and SMTP client configurations we are going to configure later.
+
+ ```bash
+ mkdir /var/www/html/autoconfig-mail
+ chown www-data /var/www/html/autoconfig-mail/
+ nano /var/www/html/autoconfig-mail/config-v1.1.xml
+ ```
+ Paste the following contents into the new file:
+ 
+ ```bash
+ <?xml version="1.0" encoding="UTF-8"?>
+
+ <clientConfig version="1.1">
+   <emailProvider id="My Mail Server">
+     <domain>example.org</domain>
+     <displayName>My Mail Server</displayName>
+     <displayShortName>Mailserver</displayShortName>
+     <incomingServer type="imap">
+       <hostname>mail.example.org</hostname>
+       <port>143</port>
+       <socketType>STARTTLS</socketType>
+       <authentication>password-cleartext</authentication>
+       <username>%EMAILADDRESS%</username>
+     </incomingServer>
+     <outgoingServer type="smtp">
+       <hostname>mail.example.org</hostname>
+       <port>587</port>
+       <socketType>STARTTLS</socketType>
+       <authentication>password-cleartext</authentication>
+       <username>%EMAILADDRESS%</username>
+     </outgoingServer>
+   </emailProvider>
+ </clientConfig>
+ ```
+ 
+ 11. Create the SSL version of your site config file, this is the one which will direct all your website traffic to the appropriate apps.
+
+ ```bash
+ nano /etc/apache2/sites-available/mail.example.org-https.conf
+ ```
+ Paste the following contents there, this will be the site which points to all the apps we will be deploying in this guide.
+ ```bash
+ <VirtualHost *:443>
+  ServerName mail.example.org
+	 DocumentRoot /var/www/html
+	 <Location /rspamd>
+   Require all granted
+	 </Location>
+	 RewriteEngine On
+  RewriteRule ^/rspamd$ /rspamd/ [R,L]
+	 RewriteRule ^/rspamd/(.*) http://localhost:11334/$1 [P,L]
+	 Alias /.well-known/autoconfig/mail /var/www/html/autoconfig-mail
+  Alias /admin /srv/postfixadmin/public
+	 <Location /admin>
+	  Options FollowSymLinks
+   AllowOverride All
+	  Require all granted
+	 </Location>
+	 SSLEngine on
+	 SSLCertificateFile /etc/letsencrypt/live/mail.example.org/fullchain.pem
+	 SSLCertificateKeyFile /etc/letsencrypt/live/mail.example.org/privkey.pem
+	</VirtualHost>
+ ```
+  
+ 12. Let's enable this site
+
+ ```bash
+ a2ensite mail.example.org-https
+ ```
+ 
+ 13. And now let's direct all non-SSL traffic to the secured SSL site
+
+ ```bash
+ nano /etc/apache2/sites-available/mail.example.org-http.conf
+ ```
+ And edit the file to include the redirects:
+ ```bash
+ <VirtualHost *:80>
+  ServerName mail.example.org
+  DocumentRoot /var/www/html
+  RewriteEngine On
+  RewriteCond %{REQUEST_URI} !.well-known/acme-challenge
+  RewriteRule ^(.*)$ https://%{SERVER_NAME}$1 [R=301,L]
+ </VirtualHost>
+ ```
+ 
+ 14. Finally, reload the Apache configs so that it works
+
+ ```bash
+ systemctl reload apache2
+ ```
+ 
+## Install PostfixAdmin and let it create the required database tables we will be using
+Note, that since we haven't configured Dovevot to use the SSL certificates yet, you CAN NOT CREATE AN ADMIN USER YET!!!
+
+ 1. Download the latest version of PostfixAdmin from thier GitHub repo and move it to the right folder, at the time of writing this, it was 3.3.10:
+ 
+ ```bash
+ wget -O postfixadmin.tgz https://github.com/postfixadmin/postfixadmin/archive/postfixadmin-3.3.10.tar.gz
+ tar -zxvf postfixadmin.tgz
+ mv postfixadmin-postfixadmin-3.3.10 /srv/postfixadmin
+ ```
+ 
+ 2. Create the required templates_c folder and give Apache privileges to write to it:
+
+ ```bash
+ mkdir -p /srv/postfixadmin/templates_c
+ chown -R www-data /srv/postfixadmin/templates_c
+ ```
+ 
+ 3. Create the required config.local.php file with the following contents (For Now):
+
+ ```bash
+ nano /srv/postfixadmin/config.local.php
+ ```
+ And Edit it to work with your database configured earlier {adminpassword} is the one you configured in MariaDB:
+ ```bash
+ <?php
+ $CONF['database_type'] = 'mysqli';
+ $CONF['database_host'] = 'localhost';
+ $CONF['database_user'] = 'mailadmin';
+ $CONF['database_password'] = '{adminpassword}';
+ $CONF['database_name'] = 'mailserver';
+ $CONF['encrypt'] = 'dovecot:BLF-CRYPT';
+ $CONF['quota'] = 'YES';
+ $CONF['quota_multiplier'] = '1024000';
+ $CONF['new_quota_table'] = 'YES';
+ $CONF['default_aliases'] = array (
+ 'abuse' => 'abuse@example.org',
+ 'hostmaster' => 'hostmaster@example.org',
+ 'postmaster' => 'postmaster@example.org',
+ 'webmaster' => 'webmaster@example.org');
+ $CONF['footer_text'] = 'Return to mail.example.org';
+ $CONF['footer_link'] = 'https://mail.example.org';
+ $CONF['domain_path'] = 'NO';
+ $CONF['domain_in_mailbox'] = 'YES';
+ $CONF['configured'] = true;
+ ?>
+ ```
