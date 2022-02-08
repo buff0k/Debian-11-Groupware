@@ -1317,6 +1317,8 @@ DKIM verifies that emails received by other persons and purporting to be from yo
 
 This is not yet working, what does work for now, is when I share a folder from SOGo, the user_shares table is updated with the from_user and to_user fields correctly.
 
+doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates that the user does not have permission to view the folder.
+
  1. Create additional tables in the existing database:
  
  ```bash
@@ -1335,3 +1337,102 @@ This is not yet working, what does work for now, is when I share a folder from S
  );
  quit
  ```
+
+ 2. Edit Dovecot mail.conf file to enable shared mailboxes:
+
+  Uncomment and edit the sample shared namespace section to look like this:
+
+ ```bash
+ namespace {
+  type = shared
+  prefix = shared/%%u/
+  location = maildir:%%h:INDEX=~/shared/%%u
+  subscriptions = no
+  list = yes
+ }
+ ```
+
+ Edit the mail_plugins section to enable acl
+
+ ```bash
+ mail_plugins = quota acl
+ ```
+
+ 3. Configure the Dovecot ACL plugin
+
+ ```bash
+ nano /etc/dovecot/conf.d/90-acl.conf
+ ```
+ Edit it to look as follows:
+ 
+ ```bash
+ plugin {
+   acl = vfile
+ }
+ 
+ plugin {
+   acl_shared_dict = proxy::acl
+ }
+ 
+ dict {
+   acl = mysql:/etc/dovecot/dovecot-dict-sql.conf.ext
+ }
+ ```
+ 
+ 4. Enable the dict service in master.conf
+ 
+ ```bash
+ nano /etc/dovecot/conf.d/10-master.conf
+ ```
+ Uncomment and edit the service dict { section like this:
+ ```bash
+ service dict {
+   unix_listener dict {
+     mode = 0600
+     user = vmail
+     group = vmail
+   }
+ }
+ ```
+ 
+ 5. Configure dict-sql-conf.ext
+
+ ```bash
+ nano /etc/dovecot/dovecot-dict-sql.conf.ext
+ ```
+ Uncomment and Edit the file to resemble this:
+ ```bash
+ connect = host=localhost dbname=mailserver user=mailadmin password=7XZB4fbDcB787rTsPWGDsFtHsxdWvK
+
+ map {
+   pattern = shared/shared-boxes/user/$to/$from
+   table = user_shares
+   value_field = dummy
+ 
+   fields {
+     from_user = $from
+     to_user = $to
+   }
+ }
+ 
+ map {
+   pattern = shared/shared-boxes/anyone/$from
+   table = anyone_shares
+   value_field = dummy
+ 
+   fields {
+     from_user = $from
+   }
+ }
+ ```
+ 
+ 6. Enable imap_acl plugin in imap.conf
+
+ ```bash
+ nano /etc/dovecot/conf.d/20-imap.conf
+ ```
+ Edit the mail_plugins section to resembler this:
+ ```bash
+ mail_plugins = $mail_plugins quota imap_sieve imap_acl
+ ```
+ 
