@@ -54,9 +54,10 @@ Debian shifts with nano by default (I know VIM could be better, but I prefer the
  3. Dovecot (Mailbox Server)
  4. Apache (Webserver, properly apache2)
  5. PHP7.4 (Scripting Language)
- 6. RspamD (Spam Filter Server)
- 7. Certbot (Obtain LetsEncrypt SSL Certificates)
- 8. SOGo (Groupware Software including IMAP client)
+ 6. Redis
+ 7. RspamD (Spam Filter Server)
+ 8. Certbot (Obtain LetsEncrypt SSL Certificates)
+ 9. SOGo (Groupware Software including IMAP client)
 
 A huge thank you to the developers and maintainers of each of the above packages, without whom, none of this would work. Seriously, support these people.
 
@@ -1027,11 +1028,206 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
 
 RSPAMD is a very good Spam Filter, we need to make some configurations to allow RSPAMD to work with Dovecot and our Sieve Plugin.
 
- 1. Set "Sensitivity" for RSPAMD to be quite permissive:
-
+ 1. Set "Sensitivity" for RSPAMD to be quite permissive
+ 
+ Create a new actions.conf file:
  ```bash
  nano /etc/rspamd/local.d/actions.conf
  ```
+ Make the settings:
+ ```bash
+ reject = 150;
+ add_header = 6;
+ greylist = 4;
+ ```
+ 
+ 2. Enable Extended Headers
+
+ This will allow RSAPMD to add fields to the email headers which will tell recipients that the email is trusted (Subject to DKIM being configured).
+ 
+ Create a milter_headers.conf file:
+  ```bash
+ nano /etc/rspamd/override.d/milter_headers.conf
+ ```
+ Enter the following string:
+ ```bash
+ extended_spam_headers = true;
+ ```
+ 
+ 3. Configure Dovecot's Sieve plugin
+
+ We want Dovecot to filter messages flagged as Spam to the user's Junk folder, so we need to configure this:
+ 
+  a. Enable the use of a sieve-after folder:
+  
+  ```bash
+  nano /etc/dovecot/conf.d/90-sieve.conf
+  ```
+  Uncomment and Edit the sieve_after string:
+  ```bash
+  sieve_after = /etc/dovecot/sieve-after
+  ```
+  
+  b. Create the sieve-after folder as configured in step a. above, and create a spam-to-folder sieve instruction:
+  
+  ```bash
+  mkdir /etc/dovecot/dieve-after
+  ```
+  Create spam-to-folder.sieve file:
+  ```bash
+  nano /etc/dovecot/sieve-after/spam-to-folder.sieve
+  ```
+  And add the following string:
+  ```bash
+  require ["fileinto"];
+  if header :contains "X-Spam" "Yes" {
+   fileinto "Junk";
+   stop;
+  }
+  ```
+  Now convert this human-readable file to a sieve instruction:
+  ```bash
+  sievec /etc/dovecot/sieve-after/spam-to-folder.sieve
+  ```
+
+ 4. Configure RSPAMD Redis server:
+ 
+ Create a file so RSPAMD knows where to find Redis:
+ 
+ ```bash
+ nano /etc/rspamd/override.d/redis.conf
+ ```
+ And enter the following string:
+ ```bash
+ servers = "127.0.0.1";
+ ```
+ Restart RSPAMD:
+ ```bash
+ systemctl restart rspamd
+ ```
+ 
+ 5. Configure RSPAMD to learn
+ 
+ RSPAMD can learn to identify spam by monitoring user actions (When users move an email to their Junk folder, it will be marked as ham, and if this action is repeated by other users, it will be marked as Spam).
+ 
+  a. Enable learning:
+  
+  ```bash
+  nano /etc/rspamd/override.d/classifier-bayes.conf
+  ```
+  Paste this line to the file:
+  ```bash
+  autolearn = true;
+  ```
+  
+  b. Configure the Dovecot Sieve plugin for IMAP folders:
+  
+  ```bash
+  nano /etc/dovecot/conf.d/20-imap.conf
+  ```
+  Uncomment and edit the mail_plugins line:
+  ```bash
+  mail_plugins = $mail_plugins quota imap_sieve
+  ```
+  
+  c. Configure the Dovecot Sieve plugin:
+  
+  ```bash
+  nano /etc/dovecot/conf.d/90-sieve.conf
+  ```
+  Add the following lines in the plugin { section:
+  ```bash
+  # From elsewhere to Junk folder
+  imapsieve_mailbox1_name = Junk
+  imapsieve_mailbox1_causes = COPY
+  imapsieve_mailbox1_before = file:/etc/dovecot/sieve/learn-spam.sieve
+
+  # From Junk folder to elsewhere
+  imapsieve_mailbox2_name = *
+  imapsieve_mailbox2_from = Junk
+  imapsieve_mailbox2_causes = COPY
+  imapsieve_mailbox2_before = file:/etc/dovecot/sieve/learn-ham.sieve
+
+  sieve_pipe_bin_dir = /etc/dovecot/sieve
+  sieve_global_extensions = +vnd.dovecot.pipe
+  sieve_plugins = sieve_imapsieve sieve_extprograms
+  ```
+  
+  d. Create the Dovecot sieve folder:
+  
+  ```bash
+  mkdir /etc/dovecot/sieve
+  ```
+  
+  e. Create Sieve files
+  
+  Create a learn-spam file:
+  ```bash
+  nano /etc/dovecot/sieve/learn-spam.sieve
+  ```
+  Enter the following strings:
+  ```bash
+  require ["vnd.dovecot.pipe", "copy", "imapsieve"];
+  pipe :copy "rspamd-learn-spam.sh";
+  ```
+  
+  Create a learn-ham file:
+  ```bash
+  nano /etc/dovecot/sieve/learn-ham.sieve
+  ```
+  Enter the following strings:
+  ```bash
+  require ["vnd.dovecot.pipe", "copy", "imapsieve", "variables"];
+  if string "${mailbox}" "Trash" {
+    stop;
+  }
+  pipe :copy "rspamd-learn-ham.sh";
+  ```
+  
+  f. Restart Dovecot
+  
+  ```bash
+  systemctl restart dovecot
+  ```
+  
+  g. Convert sieve files
+  
+  ```bash
+  sievec /etc/dovecot/sieve/learn-spam.sieve
+  sievec /etc/dovecot/sieve/learn-ham.sieve
+  chmod u=rw,go= /etc/dovecot/sieve/learn-{spam,ham}.{sieve,svbin}
+  chown vmail.vmail /etc/dovecot/sieve/learn-{spam,ham}.{sieve,svbin}
+  ```
+  
+  h. Create Scripts for RSPAMD
+  
+  Create learn-spam.sh
+  ```bash
+  nano /etc/dovecot/sieve/rspamd-learn-spam.sh
+  ```
+  Enter follwowing script:
+  ```bash
+  #!/bin/sh
+  exec /usr/bin/rspamc learn_spam
+  ```
+  Create learn-ham.sh
+  ```bash
+  nano /etc/dovecot/sieve/rspamd-learn-ham.sh
+  ```
+  Enter following script:
+  ```bash
+  #!/bin/sh
+  exec /usr/bin/rspamc learn_ham
+  ```
+  Make these .sh files executible by the vmail user:
+  ```bash
+  chmod u=rwx,go= /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
+  chown vmail.vmail /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
+  ```
+
+
+  
+ 
  
 
 ##Configure DKIM
