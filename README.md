@@ -646,7 +646,6 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  
 ##Configure Postfix
 
-
  1. Configure Postfix to Map mailboxes to the Database
 
  Earlier we configured a database in MariaDB and then populated that database with tables with PostfixAdmin. We need Postfix to actually use the data in those databases and therefore, we need to tell it where the database is as well as which fields it needs to get from each table.
@@ -898,8 +897,142 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   ```bash
   postconf virtual_transport=lmtp:unix:private/dovecot-lmtp
   ```
+  Edit the lmtp.conf file
+  ```bash
+  nano /etc/dovecot/conf.d/20-lmtp.conf
+  ```
+  In the protocol lmtp { section, edit the mail_plugins line as follows:
+  ```bash
+  mail_plugins = $mail_plugins sieve
+  ```
   
+  h. Configure Quotas
+  
+  We need to configure Quotas to work, which is used to set storage limits per user in PostfixAdmin:
+  
+  ```bash
+  nano /etc/dovecot/conf.d/90-quota.conf
+  ```
+  Edit any plugin { section to look like this:
+  ```bash
+  plugin {
+    quota = maildir:User quota
+    quota_status_success = DUNNO
+    quota_status_nouser = DUNNO
+    quota_status_overquota = "452 4.2.2 Mailbox is full and cannot receive any more emails"
+  }
+  ```
+  Add the following new sections:
+  ```bash
+  service quota-status {
+    executable = /usr/lib/dovecot/quota-status -p postfix
+    unix_listener /var/spool/postfix/private/quota-status {
+      user = postfix
+    }
+  }
+
+  plugin {
+   quota_warning = storage=95%% quota-warning 95 %u
+   quota_warning2 = storage=80%% quota-warning 80 %u
+  }
+  service quota-warning {
+     executable = script /usr/local/bin/quota-warning.sh
+     unix_listener quota-warning {
+       user = vmail
+       group = vmail
+       mode = 0660
+     }
+  }
+  ```
+  Create a shell script to set the email which will be sent to your users when they approach or reach thier quota:
+  ```bash
+  nano /usr/local/bin/quota-warning.sh
+  ```
+  And make it look like this:
+  ```bash
+  #!/bin/sh
+  PERCENT=$1
+  USER=$2
+  cat << EOF | /usr/lib/dovecot/dovecot-lda -d $USER -o "plugin/quota=maildir:User quota:noenforcing"
+  From: postmaster@example.org
+  Subject: Quota warning - $PERCENT% reached
+
+  Your mailbox can only store a limited amount of emails.
+  Currently it is $PERCENT% full. If you reach 100% then
+  new emails cannot be stored. Thanks for your understanding.
+  EOF
+  ```
+  Make this file executable:
+  ```bash
+  chmod +x /usr/local/bin/quota-warning.sh
+  ```
+  
+  i. Restart Dovecot
+  
+  ```bash
+  systemctl restart dovecot
+  ```
+
+##Finalize Postfix Configuration
+
+Now that we have Dovecot configured, we can finalize our Postfix configuration.
+
+ 1. Enable some Postfix configurations:
+ 
+ ```bash
+ postconf smtpd_sasl_type=dovecot
+ postconf smtpd_sasl_path=private/auth
+ postconf smtpd_sasl_auth_enable=yes
+ postconf smtpd_tls_security_level=may
+ postconf smtpd_tls_auth_only=yes
+ postconf smtpd_tls_cert_file=/etc/letsencrypt/live/owlery.hrcity.co.za/fullchain.pem
+ postconf smtpd_tls_key_file=/etc/letsencrypt/live/owlery.hrcity.co.za/privkey.pem
+ postconf smtp_tls_security_level=may
+ ```
+ 
+ 2. Make some changes to the Postfix master.cf file:
+
+ ```bash
+ nano /etc/postfix/master.cf
+ ```
+ Uncomment the submission inet line and uncomment the listed options, note, the indentation is important, only delete the preceding # and not any spaces:
+ ```bash
+ submission inet n       -       y       -       -       smtpd
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_tls_auth_only=yes
+  -o smtpd_reject_unlisted_recipient=no
+  -o smtpd_recipient_restrictions=
+  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING
+ ```
+ Enable our configurations:
+ ```bash
+ postconf smtpd_sender_login_maps=mysql:/etc/postfix/mysql-email2email.cf
+ postconf inet_interfaces=all
+ postconf 'smtpd_recipient_restrictions = reject_unauth_destination check_policy_service unix:private/quota-status'
+ postconf smtpd_milters=inet:127.0.0.1:11332
+ postconf non_smtpd_milters=inet:127.0.0.1:11332
+ postconf milter_mail_macros="i {mail_addr} {client_addr} {client_name} {auth_authen}"
+ ```
+ 
+ 3. Restart Postfix
+
+ ```bash
+ systemctl restart postfix
+ ```
+ 
 ##Configure RSPAMD
+
+RSPAMD is a very good Spam Filter, we need to make some configurations to allow RSPAMD to work with Dovecot and our Sieve Plugin.
+
+ 1. Set "Sensitivity" for RSPAMD to be quite permissive:
+
+ ```bash
+ nano /etc/rspamd/local.d/actions.conf
+ ```
+ 
 
 ##Configure DKIM
 
