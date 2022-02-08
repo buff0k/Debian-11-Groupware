@@ -1224,12 +1224,114 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   chmod u=rwx,go= /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
   chown vmail.vmail /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
   ```
-
-
   
+  i. Restart Dovecot
+  
+  ```bash
+  systemctl restart dovecot
+  ```
+  
+  j. Configure RSPAMD Password
+  
+  Generate password hash:
+  ```bash
+  rspamadm pw
+  ```
+  Copy the hashed paswowrd {RSPAMD Password Hash}
+  Create the RSPAMD controller.inc file
+  ```bash
+  nano /etc/rspamd/local.d/worker-controller.inc
+  ```
+  Edit the file using the hashed password generated above:
+  ```bash
+  password = "{RSPAMD Password Hash}
+  ```
+  
+  k. Restart RSPAMD
+  
+  ```bash
+  systemctl restart rspamd
+  ``` 
  
- 
-
 ##Configure DKIM
 
+DKIM verifies that emails received by other persons and purporting to be from your domain, are, in-fact, from your domain, it relies on a DNS Record with your public key to do this.
+
+ 1. Create dkim folder
+
+ ```bash
+ mkdir /var/lib/rspamd/dkim
+ chown _rspamd:_rspamd /var/lib/rspamd/dkim
+ ```
+ 
+ 2. Generate DKIM Key
+
+ Choose a string of around 8 characters (I use the date on the day, ex. 20220209), we will refer to this as {DKIMKey}:
+ 
+ ```bash
+ rspamadm dkim_keygen -d example.org -s {DKIMKey}
+ ```
+ 
+ Copy the PUBLIC part of the key (p={RANDOM STRING OF NUMBERS}). This should be one uninterrupted line so edit any spaces or linebreaks out. This is your {DKIMPublikKey}
+ 
+ 3. Configure your DNS Server for DKIM
+
+ Create a TXT Record in your DNS Server for the maildomain you wish to certify, the name of the record will be:
+ 
+ ```bash
+ {DKIMKey}._domainkey.example.org
+ ```
+ And the Content of the TXT Record will be {DKIMPublicKey} (including the p= section).
+ 
+ 4. Configure RSPAMD to use the DKIM Key:
+
+  a. Create the dkim_signing.conf file
+  
+  ```bash
+  nano /etc/rspamd/local.d/dkim_signing.conf
+  ```
+  Paste the following strings:
+  ```bash
+  path = "/var/lib/rspamd/dkim/$domain.$selector.key";
+  selector_map = "/etc/rspamd/dkim_selectors.map";
+  ```
+  
+  b. Link RSPAMD to the DKIM Key you created
+  
+  Edit dkim_selectors.map
+  ```bash
+  nano /etc/rspamd/dkim_selectors.map
+  ```
+  Enter a string which is based on your domain {DKIMKey}:
+  ```bash
+  example.org {DKIMKey}
+  ```
+  
+  c. Reload Rspamd
+  
+  ```bash
+  systemctl reload rspamd
+  ```
+
 ##Enable Mailbox Sharing (Not Yet Working)
+
+This is not yet working, what does work for now, is when I share a folder from SOGo, the user_shares table is updated with the from_user and to_user fields correctly.
+
+ 1. Create additional tables in the existing database:
+ 
+ ```bash
+ mysql
+ USE mailserver;
+ CREATE TABLE user_shares (
+  from_user varchar(100) not null,
+  to_user varchar(100) not null,
+  dummy char(1) DEFAULT '1',    -- always '1' currently
+  primary key (from_user, to_user)
+  );
+ CREATE TABLE anyone_shares (
+  from_user varchar(100) not null,
+  dummy char(1) DEFAULT '1',    -- always '1' currently
+  primary key (from_user)
+ );
+ quit
+ ```
