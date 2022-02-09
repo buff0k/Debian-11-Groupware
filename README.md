@@ -81,10 +81,20 @@ We need to create the mailserver database, as well as give permissions to both a
 
 ```bash
 mysql
+```
+```bash
 CREATE DATABASE mailserver;
+```
+```bash
 GRANT ALL ON mailserver.* TO 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
+```
+```bash
 GRANT SELECT ON mailserver.* to 'mailserver'@'127.0.0.1' IDENTIFIED BY '{userpassword}';
+```
+```bash
 FLUSH PRIVILEGES;
+```
+```bash
 quit
 ```
 
@@ -147,8 +157,14 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
 
  ```bash
  usermod -aG dovecot www-data
- chown www-data:www-data /etc/letsencrypt/live/mail.example.org/privkey.pem 
- chown www-data:www-data /etc/letsencrypt/live 
+ ```
+ ```bash
+ chown www-data:www-data /etc/letsencrypt/live/mail.example.org/privkey.pem
+ ```
+ ```bash
+ chown www-data:www-data /etc/letsencrypt/live
+ ```
+ ```bash
  chown www-data:www-data /etc/letsencrypt/archive
  ```
  
@@ -167,7 +183,11 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
 
  ```bash
  mkdir /var/www/html/autoconfig-mail
+ ```
+ ```bash
  chown www-data /var/www/html/autoconfig-mail/
+ ```
+ ```bash
  nano /var/www/html/autoconfig-mail/config-v1.1.xml
  ```
  Paste the following contents into the new file:
