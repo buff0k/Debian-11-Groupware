@@ -1,5 +1,5 @@
 # Debian 11 Groupware Server
-##Dovecot-Postfix-PostfixAdmin-SOGo
+##Dovecot Postfix PostfixAdmin SOGo RSPAMD
 
 Installing a mailserver on a Debian 11 LXC Container with Groupware Features contained in SOGo
 
@@ -19,7 +19,7 @@ I give thanks to the following projects which gave sufficient insight into makin
 
 So let's get started with this process, again, if you want to understand the steps involved in getting a working Email Server off the ground, read the ISPMail tutorial, this is not about holding your hand, it's about getting your server working.
 
-## WHy Debian 11?
+## Why Debian 11?
 
 Because it's what I prefer for server deployments, stable and mostly secure, if you want to use any other distro, you can, but I chose Debian and I also chose to use only the official Debian repos becuase, again, stability is the most important aspect in deploying servers.
 
@@ -47,14 +47,14 @@ In order to get secure passwords, use https://passwordsgenerator.net/ make sure 
 
 ## What Are We Installing?
 
-Debian shifts with nano by default (I know VIM could be better, but I prefer the interface and simplicity of nano. We will assume a fresh base install of Debian 11 (Bullseye) and will be installing the following additional packages:
+Debian shifts with nano by default (I know VIM could be better, but I prefer the interface and simplicity of nano). We will assume a fresh base install of Debian 11 (Bullseye) and will be installing the following additional packages (And their dependencies):
 
  1. MariaDB (Database Server)
  2. Postfix (Mail Server)
  3. Dovecot (Mailbox Server)
  4. Apache (Webserver, properly apache2)
  5. PHP7.4 (Scripting Language)
- 6. Redis
+ 6. Redis (Caching Server)
  7. RspamD (Spam Filter Server)
  8. Certbot (Obtain LetsEncrypt SSL Certificates)
  9. SOGo (Groupware Software including IMAP client)
@@ -1312,6 +1312,26 @@ DKIM verifies that emails received by other persons and purporting to be from yo
   ```bash
   systemctl reload rspamd
   ```
+
+##Deploy your first user
+
+You can now login to https://mail.example.org/admin/setup.php with your setup password and create an admin user. Once you have done this, you can browse to https://mail.example.org/admin and login with your admin user created in this step.
+
+From here, you can create your first domain (example.org) and your first mailuser (user@example.org) as well as your first alias (alias@example.org) and test that everything works.
+
+You can login with any IMAP mail client (Microsoft Outlook, Thunderbird, KMail, etc.) and the configurations are:
+
+IMAP Server: mail.example.org
+Port: 143
+
+SMTP Server: mail.example.org
+Port: 587
+
+Encryption: STARTTLS
+Password Type: PLAIN
+
+Username: user@example.org
+Password: Whatever you configured for the user
 
 ##Enable Mailbox Sharing (Not Yet Working)
 
