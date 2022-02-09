@@ -1,5 +1,5 @@
 # Debian 11 Groupware Server
-##Dovecot Postfix PostfixAdmin SOGo RSPAMD
+## Dovecot Postfix PostfixAdmin SOGo RSPAMD
 
 Installing a mailserver on a Debian 11 LXC Container with Groupware Features contained in SOGo
 
@@ -645,7 +645,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  systemctl reload apache2
  ```
  
-##Configure Postfix
+## Configure Postfix
 
  1. Configure Postfix to Map mailboxes to the Database
 
@@ -740,7 +740,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
   chmod u=rw,g=r,o= /etc/postfix/mysql-*.cf
   ```
 
-##Configure Dovecot
+## Configure Dovecot
 
 Dovecot does all the important mail handling, moving emails to the appropriate users folder and we need to make some changes so that we don't use systemmail (Where each user must be a specific PAM user) but rather use vmail.
 
@@ -974,7 +974,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   systemctl restart dovecot
   ```
 
-##Finalize Postfix Configuration
+## Finalize Postfix Configuration
 
 Now that we have Dovecot configured, we can finalize our Postfix configuration.
 
@@ -1024,7 +1024,7 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
  systemctl restart postfix
  ```
  
-##Configure RSPAMD
+## Configure RSPAMD
 
 RSPAMD is a very good Spam Filter, we need to make some configurations to allow RSPAMD to work with Dovecot and our Sieve Plugin.
 
@@ -1253,7 +1253,7 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   systemctl restart rspamd
   ``` 
  
-##Configure DKIM
+## Configure DKIM
 
 DKIM verifies that emails received by other persons and purporting to be from your domain, are, in-fact, from your domain, it relies on a DNS Record with your public key to do this.
 
@@ -1313,7 +1313,7 @@ DKIM verifies that emails received by other persons and purporting to be from yo
   systemctl reload rspamd
   ```
 
-##Deploy your first user
+## Deploy your first user
 
 You can now login to https://mail.example.org/admin/setup.php with your setup password and create an admin user. Once you have done this, you can browse to https://mail.example.org/admin and login with your admin user created in this step.
 
@@ -1333,7 +1333,7 @@ Password Type: PLAIN
 Username: user@example.org
 Password: Whatever you configured for the user
 
-##Enable Mailbox Sharing (Not Yet Working)
+## Enable Mailbox Sharing (Not Yet Working)
 
 This is not yet working, what does work for now, is when I share a folder from SOGo, the user_shares table is updated with the from_user and to_user fields correctly.
 
