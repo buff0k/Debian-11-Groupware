@@ -54,7 +54,7 @@ Debian shifts with nano by default (I know VIM could be better, but I prefer the
  3. [Postfix](https://www.postfix.org/) (Mail Server)
  4. [Dovecot](https://www.dovecot.org/) (Mailbox Server)
  5. [Apache](https://httpd.apache.org/) (Webserver, properly apache2)
- 6. [PHP7.4](https://www.php.net/) (Scripting Language)
+ 6. [PHP](https://www.php.net/) (Scripting Language)
  7. [Redis](https://redis.io/) (Caching Server)
  8. [Rspamd](https://rspamd.com/) (Spam Filter Server)
  9. [Certbot](https://certbot.eff.org/) (LetsEncrypt SSL Certificate Provider)
