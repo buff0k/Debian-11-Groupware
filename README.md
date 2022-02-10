@@ -1325,9 +1325,9 @@ Rspamd is a very good Spam Filter, we need to make some configurations to allow 
   ```bash
   nano /etc/rspamd/local.d/worker-controller.inc
   ```
-  Edit the file using the hashed password generated above:
+  Edit the file using the hashed password generated above (Note the leading and trailing ":
   ```bash
-  password = "{Rspamd Password Hash}
+  password = "{Rspamd Password Hash}"
   ```
   
   k. Restart Rspamd
