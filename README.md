@@ -11,11 +11,11 @@ The short-term goal is to get the deployment to actually work (Done), medium ter
 
 I give thanks to the following projects which gave sufficient insight into making all of these disparate products work:
 
-1. The original ISPMail tutorial (I suggest this as a great starting point: https://workaround.org/ispmail) which expertly describes the disparate technologies and how they are brought together in the modern email server.
+1. The original [ISPMail tutorial](https://workaround.org/ispmail) (I suggest this as a great starting point) which expertly describes the disparate technologies and how they are brought together in the modern email server.
 
-2. PostfixAdmin Guidle for ISPMail (https://gist.github.com/yajrendrag/203b0172fee96a8b002a026362d27bf2) who got PostfixAdmin to work on earlier Debian versions, however does not describe the deployment steps in sufficient detail for a complete newbie to use.
+2. [PostfixAdmin Guidle for ISPMail](https://gist.github.com/yajrendrag/203b0172fee96a8b002a026362d27bf2) to get PostfixAdmin to work on earlier Debian versions, however does not describe the deployment steps in sufficient detail for a complete newbie to use on a fresh Debian 11 system.
 
-3. This tutorial on vogan which got me moving in the right direction (I hope) in getting IMAP Mailbox Sharing to work (It's all ACL's and Databases and right now, not yet in a working condition).
+3. [This tutorial](https://vogasec.wordpress.com/2012/07/01/ubuntu-postfix-dovecot-shared-mailboxes/) on vogan which got me moving in the right direction (I hope) in getting IMAP Mailbox Sharing to work (It's all ACL's and Databases and right now, not yet in a working state).
 
 So let's get started with this process, again, if you want to understand the steps involved in getting a working Email Server off the ground, read the ISPMail tutorial, this is not about holding your hand, it's about getting your server working.
 
@@ -43,7 +43,7 @@ Database admin user: mailadmin@localhost
 
 Database admin password: {adminpassword}
 
-In order to get secure passwords, use https://passwordsgenerator.net/ make sure that you exclude special characters, I suggest 30 character length.
+In order to get secure passwords, use https://passwordsgenerator.net/ make sure that you exclude special characters when generating the passwords to avoid problems in .config files, I suggest 30 character length.
 
 ## What Are We Installing?
 
@@ -132,8 +132,8 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  <VirtualHost *:80>
    ServerName mail.example.org
    DocumentRoot /var/www/html
-  </VirtualHost>
-  ```
+ </VirtualHost>
+ ```
   
  5. Enable your newly created site:
 
@@ -227,24 +227,24 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  ```bash
  <VirtualHost *:443>
   ServerName mail.example.org
-	 DocumentRoot /var/www/html
-	 <Location /rspamd>
+  DocumentRoot /var/www/html
+  <Location /rspamd>
    Require all granted
-	 </Location>
-	 RewriteEngine On
+  </Location>
+  RewriteEngine On
   RewriteRule ^/rspamd$ /rspamd/ [R,L]
-	 RewriteRule ^/rspamd/(.*) http://localhost:11334/$1 [P,L]
-	 Alias /.well-known/autoconfig/mail /var/www/html/autoconfig-mail
+  RewriteRule ^/rspamd/(.*) http://localhost:11334/$1 [P,L]
+  Alias /.well-known/autoconfig/mail /var/www/html/autoconfig-mail
   Alias /admin /srv/postfixadmin/public
-	 <Location /admin>
-	  Options FollowSymLinks
-   AllowOverride All
-	  Require all granted
-	 </Location>
-	 SSLEngine on
-	 SSLCertificateFile /etc/letsencrypt/live/mail.example.org/fullchain.pem
-	 SSLCertificateKeyFile /etc/letsencrypt/live/mail.example.org/privkey.pem
-	</VirtualHost>
+  <Location /admin>
+    Options FollowSymLinks
+    AllowOverride All
+    Require all granted
+  </Location>
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/mail.example.org/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/mail.example.org/privkey.pem
+ </VirtualHost>
  ```
   
  12. Let's enable this site
@@ -276,13 +276,18 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  ```
  
 ## Install PostfixAdmin and let it create the required database tables we will be using
+
 Note, that since we haven't configured Dovevot to use the SSL certificates yet, you CAN NOT CREATE AN ADMIN USER YET!!!
 
  1. Download the latest version of PostfixAdmin from thier GitHub repo and move it to the right folder, at the time of writing this, it was 3.3.10:
  
  ```bash
  wget -O postfixadmin.tgz https://github.com/postfixadmin/postfixadmin/archive/postfixadmin-3.3.10.tar.gz
+ ```
+ ```bash
  tar -zxvf postfixadmin.tgz
+ ```
+ ```bash
  mv postfixadmin-postfixadmin-3.3.10 /srv/postfixadmin
  ```
  
@@ -290,6 +295,8 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
 
  ```bash
  mkdir -p /srv/postfixadmin/templates_c
+ ```
+ ```bash
  chown -R www-data /srv/postfixadmin/templates_c
  ```
  
@@ -322,6 +329,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  $CONF['configured'] = true;
  ?>
  ```
+ 
  4. Get a Secure Setup Password:
  
  On your webbrowser, connect to https://mail.example.org/admin/setup.php and enter a secure Setup Password, it will show you a configuration string which you need to copy into your .conf file, it will look something like this:
@@ -373,8 +381,14 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  
  ```bash
  mysql
+ ```
+ ```bash
  USE mailserver;
+ ```
+ ```bash
  CREATE VIEW sogo_view AS SELECT username AS c_uid, username AS c_name, password AS c_password, name AS c_cn, username AS mail FROM mailserver.mailbox;
+ ```
+ ```bash
  quit
  ```
  
@@ -545,8 +559,6 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  ```
  And Paste the following in there (Note the RedirectMatch line and point to your fqnd, this makes the SOGo app the default app when brosing to https://mail.example.org):
  ```bash
- nano /etc/apache2/conf-available/SOGo.conf
-
  Alias /SOGo.woa/WebServerResources/ \
        /usr/lib/GNUstep/SOGo/WebServerResources/
  Alias /SOGo/WebServerResources/ \
@@ -757,6 +769,8 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
   
   ```bash
   chgrp postfix /etc/postfix/mysql-*.cf
+  ```
+  ```bash
   chmod u=rw,g=r,o= /etc/postfix/mysql-*.cf
   ```
 
@@ -770,7 +784,11 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
  
  ```bash
  groupadd -g 5000 vmail
+ ```
+ ```bash
  useradd -g vmail -u 5000 vmail -d /var/vmail -m
+ ```
+ ```bash
  chown -R vmail:vmail /var/vmail
  ```
  
@@ -778,7 +796,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
  
  Dovecot has several .conf files stored in /etc/dovecot/conf.d/ and we will be modifying some of these to enable the plugins we will be using in our deployment.
  
- a. User Authentication:
+  a. User Authentication:
  
   ```bash
   nano /etc/dovecot/conf.d/10-auth.conf
@@ -797,7 +815,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   #!include auth-static.conf.ext
   ```
  
- b. Mail Directory Format
+  b. Mail Directory Format
  
   ```bash
   mail_location = maildir:~/Maildir
@@ -811,7 +829,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   mail_plugins = quota
   ```
 
- c. Master Config File
+  c. Master Config File
  
   ```bash
   nano /etc/dovecot/conf.d/10-master.conf
@@ -888,6 +906,8 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   Since we don't want this password to leak to non-root users:
   ```bash
   chown root:root /etc/dovecot/dovecot-sql.conf.ext
+  ```
+  ```bash
   chmod go= /etc/dovecot/dovecot-sql.conf.ext
   ```
   
@@ -969,7 +989,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   ```bash
   nano /usr/local/bin/quota-warning.sh
   ```
-  And make it look like this:
+  And make it look like this (Note tha From: email line, change this to your postmaster address):
   ```bash
   #!/bin/sh
   PERCENT=$1
@@ -1002,12 +1022,26 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
  
  ```bash
  postconf smtpd_sasl_type=dovecot
+ ```
+ ```bash
  postconf smtpd_sasl_path=private/auth
+ ```
+ ```bash
  postconf smtpd_sasl_auth_enable=yes
+ ```
+ ```bash
  postconf smtpd_tls_security_level=may
+ ```
+ ```bash
  postconf smtpd_tls_auth_only=yes
+ ```
+ ```bash
  postconf smtpd_tls_cert_file=/etc/letsencrypt/live/owlery.hrcity.co.za/fullchain.pem
+ ```
+ ```bash
  postconf smtpd_tls_key_file=/etc/letsencrypt/live/owlery.hrcity.co.za/privkey.pem
+ ```
+ ```bash
  postconf smtp_tls_security_level=may
  ```
  
@@ -1031,10 +1065,20 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
  Enable our configurations:
  ```bash
  postconf smtpd_sender_login_maps=mysql:/etc/postfix/mysql-email2email.cf
+ ```
+ ```bash
  postconf inet_interfaces=all
+ ```
+ ```bash
  postconf 'smtpd_recipient_restrictions = reject_unauth_destination check_policy_service unix:private/quota-status'
+ ```
+ ```bash
  postconf smtpd_milters=inet:127.0.0.1:11332
+ ```
+ ```bash
  postconf non_smtpd_milters=inet:127.0.0.1:11332
+ ```
+ ```bash
  postconf milter_mail_macros="i {mail_addr} {client_addr} {client_name} {auth_authen}"
  ```
  
@@ -1214,8 +1258,14 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   
   ```bash
   sievec /etc/dovecot/sieve/learn-spam.sieve
+  ```
+  ```bash
   sievec /etc/dovecot/sieve/learn-ham.sieve
+  ```
+  ```bash
   chmod u=rw,go= /etc/dovecot/sieve/learn-{spam,ham}.{sieve,svbin}
+  ```
+  ```bash
   chown vmail.vmail /etc/dovecot/sieve/learn-{spam,ham}.{sieve,svbin}
   ```
   
@@ -1242,6 +1292,8 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   Make these .sh files executible by the vmail user:
   ```bash
   chmod u=rwx,go= /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
+  ```
+  ```bash
   chown vmail.vmail /etc/dovecot/sieve/rspamd-learn-{spam,ham}.sh
   ```
   
@@ -1277,10 +1329,12 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
 
 DKIM verifies that emails received by other persons and purporting to be from your domain, are, in-fact, from your domain, it relies on a DNS Record with your public key to do this.
 
- 1. Create dkim folder
+ 1. Create dkim folder and give RSPAMD privileges:
 
  ```bash
  mkdir /var/lib/rspamd/dkim
+ ```
+ ```bash
  chown _rspamd:_rspamd /var/lib/rspamd/dkim
  ```
  
