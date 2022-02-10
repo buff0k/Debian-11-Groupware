@@ -151,7 +151,7 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  7. Get your SSL Certificate from LetsEncrypt:
 
  ```bash
- certbot certonly --webroot --webroot-path /var/www/html -d owlery.hrcity.co.za --agree-tos --email admin@hrcity.co.za
+ certbot certonly --webroot --webroot-path /var/www/html -d mail.example.org --agree-tos --email admin@example.org
  ```
  
  8. Give the apache user (www-data) access to the certificates, this is necessary to address a known bug with PostfixAdmin:
