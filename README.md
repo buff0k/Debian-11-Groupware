@@ -825,6 +825,16 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   ```bash
   mail_location = maildir:~/Maildir
   ```
+  Modify the namespace inbox { line section to resemble this:
+  ```bash
+  namespace {
+    type = private
+    separator = /
+    prefix =
+    location =
+    inbox = yes
+  }
+  ```
   Also Uncomment and edit the mail_plugins line:
   ```bash
   mail_plugins = quota
