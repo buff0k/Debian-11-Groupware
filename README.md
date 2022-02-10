@@ -1146,7 +1146,7 @@ Rspamd is a very good Spam Filter, we need to make some configurations to allow 
   b. Create the sieve-after folder as configured in step a. above, and create a spam-to-folder sieve instruction:
   
   ```bash
-  mkdir /etc/dovecot/dieve-after
+  mkdir /etc/dovecot/sieve-after
   ```
   Create spam-to-folder.sieve file:
   ```bash
