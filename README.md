@@ -9,7 +9,7 @@ Solutions like iRedMail insisting on charging for realy basic functionality (Ali
 
 The short-term goal is to get the deployment to actually work (Done), medium term to get some advanced features to work (Partially Working) and ultimately develop an installation script to automate the deployment.
 
-I give thanks to the following projects which gave sufficient insight into making all of these disparate products work:
+I give thanks, attribution and recognition to the following projects which gave sufficient insight into making all of these disparate products work:
 
 1. The original [ISPMail tutorial](https://workaround.org/ispmail) (I suggest this as a great starting point) which expertly describes the disparate technologies and how they are brought together in the modern email server.
 
@@ -1541,3 +1541,21 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  mail_plugins = $mail_plugins quota imap_sieve imap_acl
  ```
  
+## Enable ClamAV Scanning - Testing (Packages not included in first step)
+ 
+ClamAV is an opensource Antivirus Scanner and while it is not as effective as some commercial options, integration with Rspamd is quite simple. Antivirus scanning on a mail server by itself is not good enough and a holistic approach to security is still necessary, but every little bit helps.
+ 
+ 1. Install ClamAV Components:
+ 
+ ```bash
+ apt install -y clamav clamav-daemon clamav-unofficial-sigs
+ ```
+ 
+ 2. Configure Rspamd to use ClamAV
+ 
+  ```bash
+ nano /etc/rspamd/modules.d/antivirus.conf
+ ```
+ 
+
+  
