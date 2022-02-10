@@ -1554,8 +1554,120 @@ ClamAV is an opensource Antivirus Scanner and while it is not as effective as so
  2. Configure Rspamd to use ClamAV
  
   ```bash
- nano /etc/rspamd/modules.d/antivirus.conf
+  nano /etc/rspamd/modules.d/antivirus.conf
+  ```
+  Modify file to resemble (This rejects mail with Virus, modify to move to Junk):
+  ```bash
+  clamav {
+  symbol = "CLAM_VIRUS";
+  type = "clamav";
+  action = "reject";
+  servers = "/var/run/clamav/clamd.ctl";
+ }
+ ```
+
+## Enable Firewall with nftables - Testing (Packages not included in first step)
+
+ 1. Install nftables:
+
+ ```bash
+ apt install -y nftables
  ```
  
+ 2. Change Debian settings to have the iptables command use nftables
 
-  
+ ```bash
+ update-alternatives --config iptables
+ ```
+ 
+ 3. Create Firewall Rules file:
+
+ ```bash
+ nano /etc/nftables.conf
+ ```
+ Configuring as follows:
+ ```bash
+ #!/usr/sbin/nft -f
+ flush ruleset
+ table inet filter {
+   chain input {
+     type filter hook input priority 0; policy drop;
+
+     iifname lo accept
+     ct state established,related accept
+     tcp dport { ssh, http, https, imap2, imaps, pop3, pop3s, submission, smtp } ct state new accept
+
+     # ICMP: errors, pings
+     ip protocol icmp icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded, parameter-problem, router-solicitation, router-advertisement } accept
+     # ICMPv6: errors, pings, routing
+     ip6 nexthdr icmpv6 counter accept comment "accept all ICMP types"
+
+     # Reject other packets
+     ip protocol tcp reject with tcp reset
+   }
+ }
+ ```
+ 
+ 4. Have nftables start at boot
+ 
+ ```bash
+ systemctl enable nftables
+ ```
+ 
+ 5. Start nftables
+ 
+ ```bash
+ systemctl start nftables
+ ```
+ 
+## Brute force mitigation with fail2ban - Testing (Packages not included in first step)
+
+We will use fail2ban to monitor various system logs and look for patterns which might suggest abuse. Ideally this will prevent bad actors from gaining access to your system, however it can result in legitimate users being blocked too.
+
+Fail2ban uses "Jails" along with your firewall to block IP addresses that are missbehaving.
+
+You can use fail2ban-client status to see which jails are active, and you can use fail2ban-client status sshd to see which clients are currently rejected and why.
+
+ 1. Install fail2ban
+ 
+ ```bash
+ apt install -y fail2ban
+ ```
+ 
+ 2. Restart nftables
+ 
+ ```bash
+ systemctl restart nftables
+ ```
+ 
+ 3. Enable Postfix and Dovecot monitoring to fail2ban
+ 
+ While you can look at /etc/fail2ban/jail.conf for some sample configs for various servers, we need to create a config for our servers:
+
+ ```bash
+ nano /etc/fail2ban/jail.local
+ ```
+ Making it look like this:
+ ```bash
+ [apache-auth]
+ enabled = true
+
+ [dovecot]
+ enabled = true
+ port    = pop3,pop3s,imap2,imaps,submission,465,sieve
+
+ [postfix]
+ enabled = true
+
+ [sieve]
+ enabled = true
+ ```
+ Test your config
+ ```bash
+ fail2ban-server -t
+ ```
+ 
+ Restart fail2ban
+ ```bash
+ systemctl restart fail2ban
+ ```
