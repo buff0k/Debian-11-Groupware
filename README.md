@@ -49,15 +49,16 @@ In order to get secure passwords, use https://passwordsgenerator.net/ make sure 
 
 Debian shifts with nano by default (I know VIM could be better, but I prefer the interface and simplicity of nano). We will assume a fresh base install of Debian 11 (Bullseye) and will be installing the following additional packages (And their dependencies):
 
- 1. MariaDB (Database Server)
- 2. Postfix (Mail Server)
- 3. Dovecot (Mailbox Server)
- 4. Apache (Webserver, properly apache2)
- 5. PHP7.4 (Scripting Language)
- 6. Redis (Caching Server)
- 7. RspamD (Spam Filter Server)
- 8. Certbot (Obtain LetsEncrypt SSL Certificates)
- 9. SOGo (Groupware Software including IMAP client)
+ 1. [Debian](https://www.debian.org/) 11 (GNU/Linux OS)
+ 2. [MariaDB](https://mariadb.org/) (Database Server)
+ 3. [Postfix](https://www.postfix.org/) (Mail Server)
+ 4. [Dovecot](https://www.dovecot.org/) (Mailbox Server)
+ 5. [Apache](https://httpd.apache.org/) (Webserver, properly apache2)
+ 6. [PHP7.4](https://www.php.net/) (Scripting Language)
+ 7. [Redis](https://redis.io/) (Caching Server)
+ 8. [Rspamd](https://rspamd.com/) (Spam Filter Server)
+ 9. [Certbot](https://certbot.eff.org/) (LetsEncrypt SSL Certificate Provider)
+ 10. [SOGo](https://www.sogo.nu/) (Groupware Software including IMAP client)
 
 A huge thank you to the developers and maintainers of each of the above packages, without whom, none of this would work. Seriously, support these people.
 
