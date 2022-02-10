@@ -1,5 +1,5 @@
 # Debian 11 Groupware Server
-## Dovecot Postfix PostfixAdmin SOGo RSPAMD
+## Dovecot Postfix PostfixAdmin SOGo Rspamd
 
 Installing a mailserver on a Debian 11 LXC Container with Groupware Features contained in SOGo
 
@@ -1089,11 +1089,11 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
  systemctl restart postfix
  ```
  
-## Configure RSPAMD
+## Configure Rspamd
 
-RSPAMD is a very good Spam Filter, we need to make some configurations to allow RSPAMD to work with Dovecot and our Sieve Plugin.
+Rspamd is a very good Spam Filter, we need to make some configurations to allow Rspamd to work with Dovecot and our Sieve Plugin.
 
- 1. Set "Sensitivity" for RSPAMD to be quite permissive
+ 1. Set "Sensitivity" for Rspamd to be quite permissive
  
  Create a new actions.conf file:
  ```bash
@@ -1155,9 +1155,9 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   sievec /etc/dovecot/sieve-after/spam-to-folder.sieve
   ```
 
- 4. Configure RSPAMD Redis server:
+ 4. Configure Rspamd Redis server:
  
- Create a file so RSPAMD knows where to find Redis:
+ Create a file so Rspamd knows where to find Redis:
  
  ```bash
  nano /etc/rspamd/override.d/redis.conf
@@ -1166,14 +1166,14 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
  ```bash
  servers = "127.0.0.1";
  ```
- Restart RSPAMD:
+ Restart Rspamd:
  ```bash
  systemctl restart rspamd
  ```
  
- 5. Configure RSPAMD to learn
+ 5. Configure Rspamd to learn
  
- RSPAMD can learn to identify spam by monitoring user actions (When users move an email to their Junk folder, it will be marked as ham, and if this action is repeated by other users, it will be marked as Spam).
+ Rspamd can learn to identify spam by monitoring user actions (When users move an email to their Junk folder, it will be marked as ham, and if this action is repeated by other users, it will be marked as Spam).
  
   a. Enable learning:
   
@@ -1270,7 +1270,7 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   chown vmail.vmail /etc/dovecot/sieve/learn-{spam,ham}.{sieve,svbin}
   ```
   
-  h. Create Scripts for RSPAMD
+  h. Create Learning Scripts for Rspamd
   
   Create learn-spam.sh
   ```bash
@@ -1304,23 +1304,23 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
   systemctl restart dovecot
   ```
   
-  j. Configure RSPAMD Password
+  j. Configure Rspamd Password
   
   Generate password hash:
   ```bash
   rspamadm pw
   ```
-  Copy the hashed paswowrd {RSPAMD Password Hash}
-  Create the RSPAMD controller.inc file
+  Copy the hashed paswowrd {Rspamd Password Hash}
+  Create the Rspamd controller.inc file
   ```bash
   nano /etc/rspamd/local.d/worker-controller.inc
   ```
   Edit the file using the hashed password generated above:
   ```bash
-  password = "{RSPAMD Password Hash}
+  password = "{Rspamd Password Hash}
   ```
   
-  k. Restart RSPAMD
+  k. Restart Rspamd
   
   ```bash
   systemctl restart rspamd
@@ -1330,7 +1330,7 @@ RSPAMD is a very good Spam Filter, we need to make some configurations to allow 
 
 DKIM verifies that emails received by other persons and purporting to be from your domain, are, in-fact, from your domain, it relies on a DNS Record with your public key to do this.
 
- 1. Create dkim folder and give RSPAMD privileges:
+ 1. Create dkim folder and give Rspamd privileges:
 
  ```bash
  mkdir /var/lib/rspamd/dkim
@@ -1358,7 +1358,7 @@ DKIM verifies that emails received by other persons and purporting to be from yo
  ```
  And the Content of the TXT Record will be {DKIMPublicKey} (including the p= section).
  
- 4. Configure RSPAMD to use the DKIM Key:
+ 4. Configure Rspamd to use the DKIM Key:
 
   a. Create the dkim_signing.conf file
   
@@ -1371,7 +1371,7 @@ DKIM verifies that emails received by other persons and purporting to be from yo
   selector_map = "/etc/rspamd/dkim_selectors.map";
   ```
   
-  b. Link RSPAMD to the DKIM Key you created
+  b. Link Rspamd to the DKIM Key you created
   
   Edit dkim_selectors.map
   ```bash
