@@ -669,7 +669,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  5. Enable the SOGo Apache configuration:
 
  ```bash
- a2enconf SOGo.conf
+ a2enconf SOGo
  ```
  
  6. Reload Apache Configuration
