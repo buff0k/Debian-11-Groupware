@@ -1561,9 +1561,28 @@ ClamAV is an opensource Antivirus Scanner and while it is not as effective as so
   clamav {
   symbol = "CLAM_VIRUS";
   type = "clamav";
-  action = "reject";
   servers = "/var/run/clamav/clamd.ctl";
+  patterns {
+       symbol_name = "pattern";
+      JUST_EICAR = '^Eicar-Test-Signature$';
+    }
+    patterns_fail {
+       symbol_name = "pattern";
+      CLAM_PROTOCOL_ERROR = '^unhandled response';
+    }
  }
+ ```
+ 
+ 3. Enable ClamAV daemon
+
+ ```bash
+ systemctl enable clamav-daemon
+ ```
+ 
+ 4. Restart Rspamd
+ 
+ ```bash
+ systemctl restart rspamd
  ```
 
 ## Enable Firewall with nftables - Testing (Packages not included in first step)
