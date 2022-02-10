@@ -819,7 +819,7 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
   b. Mail Directory Format
  
   ```bash
-  mail_location = maildir:~/Maildir
+  nano /etc/dovecot/conf.d/10-mail.conf
   ```
   Uncomment and edit the mail_location line:
   ```bash
