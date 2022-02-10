@@ -1047,10 +1047,10 @@ Now that we have Dovecot configured, we can finalize our Postfix configuration.
  postconf smtpd_tls_auth_only=yes
  ```
  ```bash
- postconf smtpd_tls_cert_file=/etc/letsencrypt/live/owlery.hrcity.co.za/fullchain.pem
+ postconf smtpd_tls_cert_file=/etc/letsencrypt/live/mail.example.org/fullchain.pem
  ```
  ```bash
- postconf smtpd_tls_key_file=/etc/letsencrypt/live/owlery.hrcity.co.za/privkey.pem
+ postconf smtpd_tls_key_file=/etc/letsencrypt/live/mail.example.org/privkey.pem
  ```
  ```bash
  postconf smtp_tls_security_level=may
