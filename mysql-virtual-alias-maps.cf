@@ -1,5 +1,0 @@
-user = mailserver
-password = {userpassword}
-hosts = 127.0.0.1
-dbname = mailserver
-query = SELECT goto FROM alias WHERE address='%s'
