@@ -17,6 +17,8 @@ I give thanks, attribution and recognition to the following projects which gave 
 
 3. [This tutorial](https://vogasec.wordpress.com/2012/07/01/ubuntu-postfix-dovecot-shared-mailboxes/) on vogan which got me moving in the right direction (I hope) in getting IMAP Mailbox Sharing to work (It's all ACL's and Databases and right now, not yet in a working state).
 
+4. The [SOGo Installation Guide](https://www.sogo.nu/files/docs/SOGoInstallationGuide.html) which, while not very well written, does get you there in the end.
+
 So let's get started with this process, again, if you want to understand the steps involved in getting a working Email Server off the ground, read the ISPMail tutorial, this is not about holding your hand, it's about getting your server working.
 
 ## Why Debian 11?
@@ -400,7 +402,8 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  ```bash
  nano /etc/sogo/sogo.conf
  ```
- The Debian standard sogo.conf sucks, clear out everything (Don't rm the file unless you know how to fix permissions on a newly created file). Once you are finished, your sogo.conf file will look something like this:
+
+ The Debian standard sogo.conf (For clarity on each of the configurable fields, check out the [SOGo Installation Guide](https://www.sogo.nu/files/docs/SOGoInstallationGuide.html)) (sucks, clear out everything (Don't rm the file unless you know how to fix permissions on a newly created file). Once you are finished, your sogo.conf file will look something like this:
  ```bash
  {
    /* *********************  Main SOGo configuration file  **********************
