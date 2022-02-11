@@ -444,6 +444,21 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
    //SOGoMailSpoolPath = /var/spool/sogo;
    //NGImap4ConnectionStringSeparator = "/";
    //SOGoIMAPAclConformsToIMAPExt = YES;
+   //SOGoMailAuxiliaryUserAccountsEnabled = NO;
+   
+   /* Calendar Settings */
+   //SOGoCalendarDefaultRoles = (
+   //     PublicModifier,
+   //     ConfidentialDAndTViewer,
+   //     PrivateDandTViewer,
+   //     ObjectCreator
+   // );
+   //SOGoDayStartTime = 8;
+   //SOGoDayEndTime = 17;
+   //SOGoFirstDayOfWeek = 1;
+   //SOGoCalendarEventsDefaultClassification = PUBLIC;
+   //SOGoCalendarTasksDefaultClassification = PUBLIC;
+   
 
    /* Notifications */
    //SOGoAppointmentSendEMailNotifications = NO;
