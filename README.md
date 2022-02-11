@@ -1419,6 +1419,9 @@ You can now login to https://mail.example.org/admin/setup.php with your setup pa
 
 From here, you can create your first domain (example.org) and your first mailuser (user@example.org) as well as your first alias (alias@example.org) and test that everything works.
 
+Username: user@example.org
+Password: Whatever you configured for the user
+
 You can login with any IMAP mail client (Microsoft Outlook, Thunderbird, KMail, etc.) and the configurations are:
 
 IMAP Server: mail.example.org
@@ -1430,8 +1433,9 @@ Port: 587
 Encryption: STARTTLS
 Password Type: PLAIN
 
-Username: user@example.org
-Password: Whatever you configured for the user
+CalDAV/CarDAV (WebDAV) Access to Shared Calendars and Contacts:
+
+WebDAV Server: https://mail.example.org/SOGo/dav
 
 ## Enable Mailbox Sharing (Not Yet Working)
 
