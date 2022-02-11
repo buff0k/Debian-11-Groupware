@@ -1559,19 +1559,16 @@ ClamAV is an opensource Antivirus Scanner and while it is not as effective as so
   Modify file to resemble (This rejects mail with Virus, modify to move to Junk):
   ```bash
   clamav {
-  symbol = "CLAM_VIRUS";
-  type = "clamav";
-  servers = "/var/run/clamav/clamd.ctl";
-  patterns {
-       symbol_name = "pattern";
-      JUST_EICAR = '^Eicar-Test-Signature$';
-    }
-    patterns_fail {
-       symbol_name = "pattern";
-      CLAM_PROTOCOL_ERROR = '^unhandled response';
-    }
- }
- ```
+    scan_mime_parts = false;
+    scan_text_mime = true;
+    scan_image_mime = true;
+    symbol = "CLAM_VIRUS";
+    type = "clamav";
+    log_clean = true;
+    servers = "clamd:3310";
+    max_size = 20971520;
+  }
+  ```
  
  3. Enable ClamAV daemon
 
