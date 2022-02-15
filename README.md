@@ -849,7 +849,6 @@ Dovecot does all the important mail handling, moving emails to the appropriate u
     type = private
     separator = /
     prefix =
-    location =
     inbox = yes
   }
   ```
@@ -1486,16 +1485,19 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
   type = shared
   seperator - /
   prefix = shared/%%u/
-  location = maildir:%%h:INDEX=~/shared/%%u
+  # a) Per-user seen flags. Maildir indexes are shared. (INDEXPVT requires v2.2+)
+  location = maildir:%%h/Maildir:INDEXPVT=~/Maildir/shared/%%u
+  # b) Per-user seen flags. Maildir indexes are not shared. If users have direct filesystem level access to their mails, this is a safer option:
+  #location = maildir:%%h/Maildir:INDEX=~/Maildir/shared/%%u:INDEXPVT=~/Maildir/shared/%%u
   subscriptions = no
-  list = yes
+  list = children
  }
  ```
 
  Edit the mail_plugins section to enable acl
 
  ```bash
- mail_plugins = quota acl
+ mail_plugins = quota imap_acl
  ```
 
  3. Configure the Dovecot ACL plugin
