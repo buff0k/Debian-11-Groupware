@@ -1450,28 +1450,41 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  
  ```bash
  mysql
+ ```
+ ```bash
  USE mailserver;
+ ```
+ ```bash
  CREATE TABLE user_shares (
   from_user varchar(100) not null,
   to_user varchar(100) not null,
   dummy char(1) DEFAULT '1',    -- always '1' currently
   primary key (from_user, to_user)
   );
+ ```
+ ```bash
  CREATE TABLE anyone_shares (
   from_user varchar(100) not null,
   dummy char(1) DEFAULT '1',    -- always '1' currently
   primary key (from_user)
  );
+ ```
+ ```bash
  quit
  ```
 
  2. Edit Dovecot mail.conf file to enable shared mailboxes:
 
+  ```bash
+  nano /etc/dovecot/conf.d/10-mail.conf
+  ```
+  
   Uncomment and edit the sample shared namespace section to look like this:
 
  ```bash
  namespace {
   type = shared
+  seperator - /
   prefix = shared/%%u/
   location = maildir:%%h:INDEX=~/shared/%%u
   subscriptions = no
@@ -1529,7 +1542,7 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  ```
  Uncomment and Edit the file to resemble this:
  ```bash
- connect = host=localhost dbname=mailserver user=mailadmin password=7XZB4fbDcB787rTsPWGDsFtHsxdWvK
+ connect = host=localhost dbname=mailserver user=mailadmin password={adminpassword}
 
  map {
    pattern = shared/shared-boxes/user/$to/$from
