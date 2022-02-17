@@ -1436,9 +1436,9 @@ CalDAV/CarDAV (WebDAV) Access to Shared Calendars and Contacts:
 
 WebDAV Server: https://mail.example.org/SOGo/dav
 
-## Enable Mailbox Sharing (Not Yet Working)
+## Enable Mailbox Sharing (Testing)
 
-This is not yet working, what does work for now, is when I share a folder from SOGo, the user_shares table is updated with the from_user and to_user fields correctly.
+This appears to be working, however is still being tested.
 
 doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates that the user does not have permission to view the folder.
 
@@ -1494,7 +1494,7 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  Edit the mail_plugins section to enable acl
 
  ```bash
- mail_plugins = quota imap_acl
+ mail_plugins = quota acl
  ```
 
  3. Configure the Dovecot ACL plugin
@@ -1565,14 +1565,24 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  }
  ```
  
- 6. Enable imap_acl plugin in imap.conf
+ 6. Enable imap_acl and acl plugins in imap.conf
 
  ```bash
  nano /etc/dovecot/conf.d/20-imap.conf
  ```
- Edit the mail_plugins section to resembler this:
+ Edit the mail_plugins section to resemble this:
  ```bash
- mail_plugins = $mail_plugins quota imap_sieve imap_acl
+ mail_plugins = $mail_plugins quota imap_acl acl
+ ```
+ 
+ 7. Enable acl plugin in lmtp.conf
+
+ ```bash
+ nano /etc/dovecot/conf.d/20-lmtp.conf
+ ```
+ Edit the mail_plugins section to resemble this:
+ ```bash
+ mail_plugins = $mail_plugins quota sieve acl
  ```
  
 ## Enable ClamAV Scanning - Testing (Packages not included in first step)
