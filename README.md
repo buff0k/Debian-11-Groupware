@@ -444,6 +444,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
    //SOGoMailDomain = acme.com;
    SOGoMailingMechanism = smtp;
    SOGoForceExternalLoginWithEmail = YES;
+   //SOGoMemcachedhost = localhost;
    //SOGoMailSpoolPath = /var/spool/sogo;
    //NGImap4ConnectionStringSeparator = "/";
    //SOGoIMAPAclConformsToIMAPExt = YES;
