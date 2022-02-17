@@ -446,27 +446,27 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
    SOGoForceExternalLoginWithEmail = YES;
    SOGoMemcachedhost = 127.0.0.1;
    //SOGoMailSpoolPath = /var/spool/sogo;
-   //NGImap4ConnectionStringSeparator = "/";
+   NGImap4ConnectionStringSeparator = "/";
    SOGoIMAPAclConformsToIMAPExt = YES;
    //SOGoMailAuxiliaryUserAccountsEnabled = NO;
    
    /* Calendar Settings */
-   //SOGoCalendarDefaultRoles = (
-   //     PublicModifier,
-   //     ConfidentialDAndTViewer,
-   //     PrivateDandTViewer,
-   //     ObjectCreator
-   // );
-   //SOGoDayStartTime = 8;
-   //SOGoDayEndTime = 17;
-   //SOGoFirstDayOfWeek = 1;
-   //SOGoCalendarEventsDefaultClassification = PUBLIC;
-   //SOGoCalendarTasksDefaultClassification = PUBLIC;
+   SOGoCalendarDefaultRoles = (
+        PublicModifier,
+        ConfidentialDAndTViewer,
+        PrivateDandTViewer,
+        ObjectCreator
+    );
+   SOGoDayStartTime = 8;
+   SOGoDayEndTime = 17;
+   SOGoFirstDayOfWeek = 1;
+   SOGoCalendarEventsDefaultClassification = PUBLIC;
+   SOGoCalendarTasksDefaultClassification = PUBLIC;
    
 
    /* Notifications */
    //SOGoAppointmentSendEMailNotifications = NO;
-   //SOGoACLsSendEMailNotifications = NO;
+   SOGoACLsSendEMailNotifications = YES;
    //SOGoFoldersSendEMailNotifications = NO;
 
    /* Authentication */
@@ -544,10 +544,6 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
    /* General - SOGoTimeZone *MUST* be defined */
    SOGoLanguage = English;
    SOGoTimeZone = Africa/Johannesburg;
-   //SOGoCalendarDefaultRoles = (
-   //  PublicDAndTViewer,
-   //  ConfidentialDAndTViewer
-   //);
    //SOGoSuperUsernames = (sogo1, sogo2); // This is an array - keep the parens!
    //SxVMemLimit = 384;
    //WOPidFile = "/var/run/sogo/sogo.pid";
