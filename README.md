@@ -296,7 +296,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  1. Download the latest version of PostfixAdmin from thier GitHub repo and move it to the right folder, at the time of writing this, it was 3.3.10:
  
  ```bash
- wget -O postfixadmin.tgz https://github.com/postfixadmin/postfixadmin/archive/postfixadmin-3.3.10.tar.gz
+ wget -O postfixadmin.tgz https://github.com/postfixadmin/postfixadmin/archive/postfixadmin-3.3.11.tar.gz
  ```
  ```bash
  tar -zxvf postfixadmin.tgz
