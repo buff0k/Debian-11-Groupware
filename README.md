@@ -95,6 +95,18 @@ GRANT ALL ON mailserver.* TO 'mailadmin'@'localhost' IDENTIFIED BY '{adminpasswo
 GRANT SELECT ON mailserver.* to 'mailserver'@'127.0.0.1' IDENTIFIED BY '{userpassword}';
 ```
 ```bash
+CREATE DATABASE mailshares;
+```
+```bash
+GRANT ALL ON mailshares.* to 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
+```
+```bash
+CREATE DATABASE sogo;
+```
+```bash
+GRANT ALL ON sogo.* to 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
+```
+```bash
 FLUSH PRIVILEGES;
 ```
 ```bash
@@ -423,14 +435,14 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
     * **************************************************************************/
 
    /* Database configuration (mysql://, postgresql:// or oracle://) */
-   SOGoProfileURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_user_profile";
-   OCSFolderInfoURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_folder_info";
-   OCSSessionsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_sessions_folder";
-   OCSEMailAlarmsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_emailalarms_folder";
+   SOGoProfileURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_user_profile";
+   OCSFolderInfoURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_folder_info";
+   OCSSessionsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_sessions_folder";
+   OCSEMailAlarmsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_emailalarms_folder";
 
-   OCSStoreURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_store";
-   OCSAclURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_acl";
-   OCSCacheFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/mailserver/sogo_cache";
+   OCSStoreURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_store";
+   OCSAclURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_acl";
+   OCSCacheFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_cache";
 
    /* Mail */
    SOGoSentFolderName = "Sent Items";
@@ -1448,7 +1460,7 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  mysql
  ```
  ```bash
- USE mailserver;
+ USE mailshares;
  ```
  ```bash
  CREATE TABLE user_shares (
@@ -1541,7 +1553,7 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  ```
  Uncomment and Edit the file to resemble this:
  ```bash
- connect = host=localhost dbname=mailserver user=mailadmin password={adminpassword}
+ connect = host=localhost dbname=mailshares user=mailadmin password={adminpassword}
 
  map {
    pattern = shared/shared-boxes/user/$to/$from
