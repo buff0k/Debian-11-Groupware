@@ -1,5 +1,5 @@
 # Debian 11 Groupware Server
-## Dovecot Postfix PostfixAdmin SOGo Rspamd
+## Dovecot Postfix PostfixAdmin Rspamd SOGo/NextCloud
 
 Installing a mailserver on a Debian 11 LXC Container with Groupware Features contained in SOGo
 
@@ -8,6 +8,8 @@ Since Google has decided to retire their Google Apps for Business and force migr
 Solutions like iRedMail insisting on charging for realy basic functionality (Alias) and Mailcow's refusal to support deployment outside of Docker and thier maintainers refusal to engage on the issues raised when they implenment changes for no reason other than to break Docker on LXC lead me down a realy deep rabit hole to build my solution from existing standards and open-source software.
 
 The short-term goal is to get the deployment to actually work (Done), medium term to get some advanced features to work (Partially Working) and ultimately develop an installation script to automate the deployment.
+
+After finally deploying this in a working state using SOGo, I realized that it would be fairly easy to give the user the choice between SOGo or NextCloud or, if he so chooses, both, so I moved SOGo into a seperate part and added a part for NextCloud.
 
 I give thanks, attribution and recognition to the following projects which gave sufficient insight into making all of these disparate products work:
 
@@ -18,6 +20,8 @@ I give thanks, attribution and recognition to the following projects which gave 
 3. [This tutorial](https://vogasec.wordpress.com/2012/07/01/ubuntu-postfix-dovecot-shared-mailboxes/) on vogan which got me moving in the right direction (I hope) in getting IMAP Mailbox Sharing to work (It's all ACL's and Databases and right now, not yet in a working state).
 
 4. The [SOGo Installation Guide](https://www.sogo.nu/files/docs/SOGoInstallationGuide.html) which, while not very well written, does get you there in the end.
+
+5. [This tutorial](https://computingforgeeks.com/how-to-install-and-configure-nextcloud-on-debian/) from ComputingForGeeks, which has a few minor errors and deviations from best practices which I have changed here.
 
 So let's get started with this process, again, if you want to understand the steps involved in getting a working Email Server off the ground, read the ISPMail tutorial, this is not about holding your hand, it's about getting your server working.
 
@@ -61,6 +65,7 @@ Debian shifts with nano by default (I know VIM could be better, but I prefer the
  8. [Rspamd](https://rspamd.com/) (Spam Filter Server)
  9. [Certbot](https://certbot.eff.org/) (LetsEncrypt SSL Certificate Provider)
  10. [SOGo](https://www.sogo.nu/) (Groupware Software including IMAP client)
+ 11. [NextCLoud](https://nextcloud.org/) (Cloud File Server with support for Mail through an IMAP Client plugin)
 
 A huge thank you to the developers and maintainers of each of the above packages, without whom, none of this would work. Seriously, support these people.
 
@@ -1421,7 +1426,7 @@ You can use fail2ban-client status to see which jails are active, and you can us
  systemctl restart fail2ban
  ```
 
-## Install SOGo Groupware
+## Install SOGo Groupware (Optional)
 
  1. Install SOGo from default Debian repositories:
  ```bash
@@ -1758,3 +1763,117 @@ You can use fail2ban-client status to see which jails are active, and you can us
  ```
 
  That is it, SOGo should now be accessible at https://mail.example.org/SOGo and you should be able to log in with any user created in postfixadmin.
+ 
+ ## Installing NextCloud (Optional)
+ 
+ Note that While NextCloud is not natively an email client, it has apps which include mail. Unfortunately, they do not support mailbox sharing through IMAP, however I'm sure if enough people ask for that feature it will be implemented.
+ 
+ 1. Add some additional PHP modules which the standard installation above doesn't need, as well as sudo (in case you need to manually install a NextCloud Plugin from the command line as www-data user and unzip to decompress the NextCloud zip file.
+ ```bash
+ apt install -y php-{cli,xml,zip,curl,gd,cgi} unzip sudo
+ ```
+
+ 2. Create a database for NextCloud to use:
+ ```bash
+ mysql
+ ```
+ ```bash
+ CREATE USER 'nextcloud'@'localhost' IDENTIFIED BY 'StrongDBP@SSwo$d';
+ ```
+ ```bash
+ CREATE DATABASE nextcloud;
+ ```
+ ```bash
+ GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'localhost';
+ ```
+ ```bash
+ FLUSH PRIVILEGES;
+ ```
+ ```bash
+ quit
+ ```
+ 
+ 3. Edit the php.ini file:
+ ```bash
+ nano /etc/php/*/apache2/php.ini
+ ```
+ And make sure the following lines look correct for your environment:
+ ```bash
+ date.timezone = Africa/Johannesburg
+ memory_limit = 512M
+ upload_max_filesize = 500M
+ post_max_size = 500M
+ max_execution_time = 300
+ ```
+ 
+ 4. Add an Alias for NextCloud to your 
+  ```bash
+ nano /etc/apache2/sites-available/mail.example.org-https.conf
+ ```
+ If you followed this guide, you need to add an Alias and Location block for NextCloud:
+ ```bash
+ <VirtualHost *:443>
+  ServerName mail.example.org
+  DocumentRoot /var/www/html
+  <Location /rspamd>
+   Require all granted
+  </Location>
+  RewriteEngine On
+  RewriteRule ^/rspamd$ /rspamd/ [R,L]
+  RewriteRule ^/rspamd/(.*) http://localhost:11334/$1 [P,L]
+  Alias /.well-known/autoconfig/mail /var/www/html/autoconfig-mail
+  Alias /admin /srv/postfixadmin/public
+  <Location /admin>
+    Options FollowSymLinks
+    AllowOverride All
+    Require all granted
+  </Location>
+  Alias /nextcloud /srv/nextcloud
+  <Location /nextcloud>
+    Require all granted
+  </Location>
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/mail.example.org/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/mail.example.org/privkey.pem
+ </VirtualHost>
+ ```
+ 
+ 5. Restart Apache
+ ```bash
+ systemctl restart apache2
+ ```
+ 
+ 6. Download the latest version of NextCloud (23.0.2 at the time of writing):
+ ```bash
+ wget https://download.nextcloud.com/server/releases/nextcloud-23.0.2.zip
+ ```
+ 
+ 7. Unzip the file:
+ ```bash
+ unzip nextcloud-23.0.2.zip
+ ```
+ 
+ 8. Move the NextCloud folder to your /srv folder
+ ```bash
+ mv /nextcloud /srv/nextcloud
+ ```
+ 
+ 9. Fix permissions for the NextCloud Folder
+ ```bash
+ chown -R www-data:www-data /srv/nextcloud
+ ```
+ ```bash
+ chmod -R 755 /srv/nextcloud
+ ```
+
+ You should now be able to login to your NextCloud installation at https://mail.example.org/nextcloud, create an admin user, use the database credentials you configured earlier and let it complete the installation. A known bug is that when installation competes it tries to go to the wrong page. Just navigate back to https://mail.example.org/nextcloud and you should be fine.
+ 
+ 10. Install Collabora Online - Built-in CODE Server (Testing):
+ 
+ This installation generally fails from the apps store in NextCloud due to its size, you can manually install this app as follows using the occ command from the console:
+ ```bash
+ cd /srv/nextcloud
+ ```
+ ```bash
+ sudo -u www-data php -d memory_limit=512M ./occ app:install richdocumentscode
+ ```
