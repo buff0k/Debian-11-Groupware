@@ -75,7 +75,7 @@ apt update && apt upgrade -y
 This installs all the packages we require to get everything to work:
 
 ```bash
-apt install -y mariadb-server postfix postfix-mysql apache2 php php-{imap,mbstring,mysql} rspamd redis-server certbot dovecot-mysql dovecot-pop3d dovecot-imapd dovecot-managesieved dovecot-lmtpd sogo ca-certificates
+apt install -y mariadb-server postfix postfix-mysql apache2 php php-{imap,mbstring,mysql} rspamd redis-server certbot dovecot-mysql dovecot-pop3d dovecot-imapd dovecot-managesieved dovecot-lmtpd ca-certificates
 ```
 
 ## Prepare MariaDB
@@ -99,12 +99,6 @@ CREATE DATABASE mailshares;
 ```
 ```bash
 GRANT ALL ON mailshares.* to 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
-```
-```bash
-CREATE DATABASE sogo;
-```
-```bash
-GRANT ALL ON sogo.* to 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
 ```
 ```bash
 FLUSH PRIVILEGES;
@@ -387,323 +381,6 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  6. Allow PostfixAdmin to deploy your database tables for you:
  
  From your webbrowser, go back to https://mail.example.org/admin/setup.php and login in with the Setup Password you used to create the secure string in step 4. It will tell you that there's a problem with the encryption, that is fine, it will still generate the tables in your database (You will see a string saying that tables were succesfully updated or, are up to date). For now, we are done with this, once we have finished configuring Dovecot, this will work fine.
-
-##Install and configure SOGo Groupware
-
- 1. Create a SQL VIEW to authenticate users:
- 
- Firstly, SOGo relies on some specific table columns to authenticate users, since we don't want duplicates and since we want PostfixAdmin to manage users, domains and aliases, we want to make SOGo use this information to authenticate users. To do that, we will create a VIEW, which is like a fake table made up of data from other tables in MariaDB.
- 
- ```bash
- mysql
- ```
- ```bash
- USE mailserver;
- ```
- ```bash
- CREATE VIEW sogo_view AS SELECT username AS c_uid, username AS c_name, password AS c_password, name AS c_cn, username AS mail FROM mailserver.mailbox;
- ```
- ```bash
- quit
- ```
- 
- 2. Configure SOGo:
- 
- I suggest going through every line, however key issues will be {adminpassword}, {userpassword} and your timezone (I use Africa/Johannesburg).
- 
- ```bash
- nano /etc/sogo/sogo.conf
- ```
-
- The Debian standard sogo.conf (For clarity on each of the configurable fields, check out the [SOGo Installation Guide](https://www.sogo.nu/files/docs/SOGoInstallationGuide.html)) (sucks, clear out everything (Don't rm the file unless you know how to fix permissions on a newly created file). Once you are finished, your sogo.conf file will look something like this:
- ```bash
- {
-   /* *********************  Main SOGo configuration file  **********************
-    *                                                                           *
-    * Since the content of this file is a dictionary in OpenStep plist format,  *
-    * the curly braces enclosing the body of the configuration are mandatory.   *
-    * See the Installation Guide for details on the format.                     *
-    *                                                                           *
-    * C and C++ style comments are supported.                                   *
-    *                                                                           *
-    * This example configuration contains only a subset of all available        *
-    * configuration parameters. Please see the installation guide more details. *
-    *                                                                           *
-    * ~sogo/GNUstep/Defaults/.GNUstepDefaults has precedence over this file,    *
-    * make sure to move it away to avoid unwanted parameter overrides.          *
-    *                                                                           *
-    * **************************************************************************/
-
-   /* Database configuration (mysql://, postgresql:// or oracle://) */
-   SOGoProfileURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_user_profile";
-   OCSFolderInfoURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_folder_info";
-   OCSSessionsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_sessions_folder";
-   OCSEMailAlarmsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_emailalarms_folder";
-
-   OCSStoreURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_store";
-   OCSAclURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_acl";
-   OCSCacheFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_cache";
-
-   /* Mail */
-   SOGoSentFolderName = "Sent Items";
-   SOGoTrashFolderName = "Deleted Items";
-   SOGoDraftsFolderName = Drafts;
-   SOGoJunkFolderName = "Junk Email";
-   SOGoIMAPServer = "localhost";
-   SOGoSieveServer = "sieve://127.0.0.1:4190";
-   SOGoSMTPServer = "smtp://mail.example.org:587/?tls=YES";
-   SOGoSMTPAuthenticationType = PLAIN;
-   //SOGoMailDomain = acme.com;
-   SOGoMailingMechanism = smtp;
-   SOGoForceExternalLoginWithEmail = YES;
-   SOGoMemcachedhost = 127.0.0.1;
-   //SOGoMailSpoolPath = /var/spool/sogo;
-   NGImap4ConnectionStringSeparator = "/";
-   SOGoIMAPAclConformsToIMAPExt = YES;
-   //SOGoMailAuxiliaryUserAccountsEnabled = NO;
-   
-   /* Calendar Settings */
-   SOGoCalendarDefaultRoles = (
-        PublicModifier,
-        ConfidentialDAndTViewer,
-        PrivateDandTViewer,
-        ObjectCreator
-    );
-   SOGoDayStartTime = 8;
-   SOGoDayEndTime = 17;
-   SOGoFirstDayOfWeek = 1;
-   SOGoCalendarEventsDefaultClassification = PUBLIC;
-   SOGoCalendarTasksDefaultClassification = PUBLIC;
-   
-
-   /* Notifications */
-   //SOGoAppointmentSendEMailNotifications = NO;
-   SOGoACLsSendEMailNotifications = YES;
-   //SOGoFoldersSendEMailNotifications = NO;
-
-   /* Authentication */
-   //SOGoPasswordChangeEnabled = YES;
-
-   /* LDAP authentication example */
-   //SOGoUserSources = (
-   //  {
-   //    type = ldap;
-   //    CNFieldName = cn;
-   //    UIDFieldName = uid;
-   //    IDFieldName = uid; // first field of the DN for direct binds
-   //    bindFields = (uid, mail); // array of fields to use for indirect binds
-   //    baseDN = "ou=users,dc=acme,dc=com";
-   //    bindDN = "uid=sogo,ou=users,dc=acme,dc=com";
-   //    bindPassword = qwerty;
-   //    canAuthenticate = YES;
-   //    displayName = "Shared Addresses";
-   //    hostname = "ldap://127.0.0.1:389";
-   //    id = public;
-   //    isAddressBook = YES;
-   //  }
-   //);
-
-   /* LDAP AD/Samba4 example */
-   //SOGoUserSources = (
-   //  {
-   //    type = ldap;
-   //    CNFieldName = cn;
-   //    UIDFieldName = sAMAccountName;
-   //    baseDN = "CN=users,dc=domain,dc=tld";
-   //    bindDN = "CN=sogo,CN=users,DC=domain,DC=tld";
-   //    bindFields = (sAMAccountName, mail);
-   //    bindPassword = password;
-   //    canAuthenticate = YES;
-   //    displayName = "Public";
-   //    hostname = "ldap://127.0.0.1:389";
-   //    filter = "mail = '*'";
-   //    id = directory;
-   //    isAddressBook = YES;
-   //  }
-   //);
-
-
-   /* SQL authentication example */
-   /*  These database columns MUST be present in the view/table:
-    *    c_uid - will be used for authentication -  it's the username or username@domain.tld)
-    *    c_name - which can be identical to c_uid -  will be used to uniquely identify entries
-    *    c_password - password of the user, plain-text, md5 or sha encoded for now
-    *    c_cn - the user's common name - such as "John Doe"
-    *    mail - the user's mail address
-    *  See the installation guide for more details
-    */
-   SOGoUserSources =
-     (
-       {
-         type = sql;
-         id = directory;
-         viewURL = "mysql://mailserver:{userpassword}@127.0.0.1:3306/mailserver/sogo_view";
-         canAuthenticate = YES;
-         isAddressBook = YES;
-         userPasswordAlgorithm = blf-crypt;
-       }
-     );
- 
-   /* Web Interface */
-   SOGoPageTitle = "My Mail Server";
-   SOGoVacationEnabled = YES;
-   SOGoForwardEnabled = YES;
-   SOGoSieveScriptsEnabled = YES;
-   SOGoMailAuxiliaryUserAccountsEnabled = YES;
-   // SOGoTrustProxyAuthentication = NO;
-   //SOGoXSRFValidationEnabled = NO;
- 
-   /* General - SOGoTimeZone *MUST* be defined */
-   SOGoLanguage = English;
-   SOGoTimeZone = Africa/Johannesburg;
-   //SOGoSuperUsernames = (sogo1, sogo2); // This is an array - keep the parens!
-   //SxVMemLimit = 384;
-   //WOPidFile = "/var/run/sogo/sogo.pid";
-   SOGoMemcachedHost = 127.0.0.1;
-   
-   /* Debug */
-   //SOGoDebugRequests = YES;
-   //SoDebugBaseURL = YES;
-   //ImapDebugEnabled = YES;
-   //LDAPDebugEnabled = YES;
-   //PGDebugEnabled = YES;
-   //MySQL4DebugEnabled = YES;
-   //SOGoUIxDebugEnabled = YES;
-   //WODontZipResponse = YES;
-   //WOLogFile = /var/log/sogo/sogo.log;
- }
- ```
-
- 3. Restart SOGo
- 
- ```bash
- systemctl restart sogo
- ```
- 
- 4. Create a SOGo cofiguration file in Apache:
-
- ```bash
- nano /etc/apache2/conf-available/SOGo.conf
- ```
- And Paste the following in there (Note the RedirectMatch line and point to your fqnd, this makes the SOGo app the default app when brosing to https://mail.example.org):
- ```bash
- Alias /SOGo.woa/WebServerResources/ \
-       /usr/lib/GNUstep/SOGo/WebServerResources/
- Alias /SOGo/WebServerResources/ \
-       /usr/lib/GNUstep/SOGo/WebServerResources/
-
- <Directory /usr/lib/GNUstep/SOGo/>
-     AllowOverride None
-
-     <IfVersion < 2.4>
-         Order deny,allow
-         Allow from all
-     </IfVersion>
-     <IfVersion >= 2.4>
-         Require all granted
-     </IfVersion>
-
-     # Explicitly allow caching of static content to avoid browser specific behavior.
-     # A resource's URL MUST change in order to have the client load the new version.
-     <IfModule expires_module>
-       ExpiresActive On
-       ExpiresDefault "access plus 1 year"
-     </IfModule>
- </Directory>
-
- # Don't send the Referer header for cross-origin requests
- Header always set Referrer-Policy "same-origin"
-
- ## Uncomment the following to enable proxy-side authentication, you will then
- ## need to set the "SOGoTrustProxyAuthentication" SOGo user default to YES and
- ## adjust the "x-webobjects-remote-user" proxy header in the "Proxy" section
- ## below.
- #
- ## For full proxy-side authentication:
- #<Location /SOGo>
- #  AuthType XXX
- #  Require valid-user
- #  SetEnv proxy-nokeepalive 1
- #  Allow from all
- #</Location>
- #
- ## For proxy-side authentication only for CardDAV and GroupDAV from external
- ## clients:
- #<Location /SOGo/dav>
- #  AuthType XXX
- #  Require valid-user
- #  SetEnv proxy-nokeepalive 1
- #  Allow from all
- #</Location>
-
- ProxyRequests Off
- SetEnv proxy-nokeepalive 1
- ProxyPreserveHost On
-
- # When using CAS, you should uncomment this and install cas-proxy-validate.py
- # in /usr/lib/cgi-bin to reduce server overloading
- #
- # ProxyPass /SOGo/casProxy http://localhost/cgi-bin/cas-proxy-validate.py
- # <Proxy http://localhost/app/cas-proxy-validate.py>
- #   Order deny,allow
- #   Allow from your-cas-host-addr
- # </Proxy>
-
- # Redirect / to /SOGo
- RedirectMatch ^/$ https://mail.example.org/SOGo
-
- # Enable to use Microsoft ActiveSync support
- # Note that you MUST have many sogod workers to use ActiveSync.
- # See the SOGo Installation and Configuration guide for more details.
- #
- #ProxyPass /Microsoft-Server-ActiveSync \
- # http://127.0.0.1:20000/SOGo/Microsoft-Server-ActiveSync \
- # retry=60 connectiontimeout=5 timeout=360
-
- ProxyPass /SOGo http://127.0.0.1:20000/SOGo retry=0 nocanon
-
- <Proxy http://127.0.0.1:20000/SOGo>
- ## Adjust the following to your configuration
- ## and make sure to enable the headers module
- <IfModule headers_module>
-   RequestHeader set "x-webobjects-server-port" "443"
-   SetEnvIf Host (.*) HTTP_HOST=$1
-   RequestHeader set "x-webobjects-server-name" "%{HTTP_HOST}e" env=HTTP_HOST
-   RequestHeader set "x-webobjects-server-url" "https://%{HTTP_HOST}e" env=HTTP_HOST
-
- ## When using proxy-side autentication, you need to uncomment and
- ## adjust the following line:
-   RequestHeader unset "x-webobjects-remote-user"
- #  RequestHeader set "x-webobjects-remote-user" "%{REMOTE_USER}e" env=REMOTE_USER
-
-   RequestHeader set "x-webobjects-server-protocol" "HTTP/1.0"
- </IfModule>
-
-   AddDefaultCharset UTF-8
-
-   Order allow,deny
-   Allow from all
- </Proxy>
-
- # For Apple autoconfiguration
- <IfModule rewrite_module>
-   RewriteEngine On
-   RewriteRule ^/.well-known/caldav/?$ /SOGo/dav [R=301]
-   RewriteRule ^/.well-known/carddav/?$ /SOGo/dav [R=301]
- </IfModule>
- ```
- 
- 5. Enable the SOGo Apache configuration:
-
- ```bash
- a2enconf SOGo
- ```
- 
- 6. Reload Apache Configuration
-
- ```bash
- systemctl reload apache2
- ```
  
 ## Configure Postfix
 
@@ -713,7 +390,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  
   a. Virtual Domains
   
-  A Virtual Domain is simply the Domains for which your mailserver accepts email (example.org or as many other as you want to add), we need to tell Postfix which domains it is allowed to accept mail for so we need to create a MAP file:
+  Virtual Domains are simply the Domains for which your mailserver accepts email (example.org or as many other as you want to add), we need to tell Postfix which domains it is allowed to accept mail for so we need to create a MAP file:
   
   ```bash
   nano /etc/postfix/mysql-virtual-mailbox-domains.cf
@@ -1743,3 +1420,341 @@ You can use fail2ban-client status to see which jails are active, and you can us
  ```bash
  systemctl restart fail2ban
  ```
+
+## Install SOGo Groupware
+
+ 1. Install SOGo from default Debian repositories:
+ ```bash
+ apt install -y sogo
+ ```
+ 
+ 2. Create a database for SOGo specific information (Seperate from the PostfixAdmin Database):
+ ```bash
+ mysql
+ ```
+ ```bash
+ CREATE DATABASE sogo;
+ ```
+ ```bash
+ GRANT ALL ON sogo.* to 'mailadmin'@'localhost' IDENTIFIED BY '{adminpassword}';
+ ```
+ ```bash
+ FLUSH PRIVILEGES;
+ ```
+ 
+ 3. Create a database view for SOGo:
+
+ Firstly, SOGo relies on some specific table columns to authenticate users, since we don't want duplicates and since we want PostfixAdmin to manage users, domains and aliases, we want to make SOGo use this information to authenticate users. To do that, we will create a VIEW, which is like a fake table made up of data from other tables in MariaDB.
+ 
+ ```bash
+ mysql
+ ```
+ ```bash
+ USE mailserver;
+ ```
+ ```bash
+ CREATE VIEW sogo_view AS SELECT username AS c_uid, username AS c_name, password AS c_password, name AS c_cn, username AS mail FROM mailserver.mailbox;
+ ```
+ ```bash
+ quit
+ ```
+ 
+ 3. Configure SOGo:
+ 
+ I suggest going through every line, however key issues will be {adminpassword}, {userpassword} and your timezone (I use Africa/Johannesburg).
+ 
+ ```bash
+ nano /etc/sogo/sogo.conf
+ ```
+
+ The Debian standard sogo.conf (For clarity on each of the configurable fields, check out the [SOGo Installation Guide](https://www.sogo.nu/files/docs/SOGoInstallationGuide.html)) (sucks, clear out everything (Don't rm the file unless you know how to fix permissions on a newly created file). Once you are finished, your sogo.conf file will look something like this:
+ ```bash
+ {
+   /* *********************  Main SOGo configuration file  **********************
+    *                                                                           *
+    * Since the content of this file is a dictionary in OpenStep plist format,  *
+    * the curly braces enclosing the body of the configuration are mandatory.   *
+    * See the Installation Guide for details on the format.                     *
+    *                                                                           *
+    * C and C++ style comments are supported.                                   *
+    *                                                                           *
+    * This example configuration contains only a subset of all available        *
+    * configuration parameters. Please see the installation guide more details. *
+    *                                                                           *
+    * ~sogo/GNUstep/Defaults/.GNUstepDefaults has precedence over this file,    *
+    * make sure to move it away to avoid unwanted parameter overrides.          *
+    *                                                                           *
+    * **************************************************************************/
+
+   /* Database configuration (mysql://, postgresql:// or oracle://) */
+   SOGoProfileURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_user_profile";
+   OCSFolderInfoURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_folder_info";
+   OCSSessionsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_sessions_folder";
+   OCSEMailAlarmsFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_emailalarms_folder";
+
+   OCSStoreURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_store";
+   OCSAclURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_acl";
+   OCSCacheFolderURL = "mysql://mailadmin:{adminpassword}@localhost:3306/sogo/sogo_cache";
+
+   /* Mail */
+   SOGoSentFolderName = "Sent Items";
+   SOGoTrashFolderName = "Deleted Items";
+   SOGoDraftsFolderName = Drafts;
+   SOGoJunkFolderName = "Junk Email";
+   SOGoIMAPServer = "localhost";
+   SOGoSieveServer = "sieve://127.0.0.1:4190";
+   SOGoSMTPServer = "smtp://mail.example.org:587/?tls=YES";
+   SOGoSMTPAuthenticationType = PLAIN;
+   //SOGoMailDomain = acme.com;
+   SOGoMailingMechanism = smtp;
+   SOGoForceExternalLoginWithEmail = YES;
+   SOGoMemcachedhost = 127.0.0.1;
+   //SOGoMailSpoolPath = /var/spool/sogo;
+   NGImap4ConnectionStringSeparator = "/";
+   SOGoIMAPAclConformsToIMAPExt = YES;
+   //SOGoMailAuxiliaryUserAccountsEnabled = NO;
+   
+   /* Calendar Settings */
+   SOGoCalendarDefaultRoles = (
+        PublicModifier,
+        ConfidentialDAndTViewer,
+        PrivateDandTViewer,
+        ObjectCreator
+    );
+   SOGoDayStartTime = 8;
+   SOGoDayEndTime = 17;
+   SOGoFirstDayOfWeek = 1;
+   SOGoCalendarEventsDefaultClassification = PUBLIC;
+   SOGoCalendarTasksDefaultClassification = PUBLIC;
+   
+
+   /* Notifications */
+   //SOGoAppointmentSendEMailNotifications = NO;
+   SOGoACLsSendEMailNotifications = YES;
+   //SOGoFoldersSendEMailNotifications = NO;
+
+   /* Authentication */
+   //SOGoPasswordChangeEnabled = YES;
+
+   /* LDAP authentication example */
+   //SOGoUserSources = (
+   //  {
+   //    type = ldap;
+   //    CNFieldName = cn;
+   //    UIDFieldName = uid;
+   //    IDFieldName = uid; // first field of the DN for direct binds
+   //    bindFields = (uid, mail); // array of fields to use for indirect binds
+   //    baseDN = "ou=users,dc=acme,dc=com";
+   //    bindDN = "uid=sogo,ou=users,dc=acme,dc=com";
+   //    bindPassword = qwerty;
+   //    canAuthenticate = YES;
+   //    displayName = "Shared Addresses";
+   //    hostname = "ldap://127.0.0.1:389";
+   //    id = public;
+   //    isAddressBook = YES;
+   //  }
+   //);
+
+   /* LDAP AD/Samba4 example */
+   //SOGoUserSources = (
+   //  {
+   //    type = ldap;
+   //    CNFieldName = cn;
+   //    UIDFieldName = sAMAccountName;
+   //    baseDN = "CN=users,dc=domain,dc=tld";
+   //    bindDN = "CN=sogo,CN=users,DC=domain,DC=tld";
+   //    bindFields = (sAMAccountName, mail);
+   //    bindPassword = password;
+   //    canAuthenticate = YES;
+   //    displayName = "Public";
+   //    hostname = "ldap://127.0.0.1:389";
+   //    filter = "mail = '*'";
+   //    id = directory;
+   //    isAddressBook = YES;
+   //  }
+   //);
+
+
+   /* SQL authentication example */
+   /*  These database columns MUST be present in the view/table:
+    *    c_uid - will be used for authentication -  it's the username or username@domain.tld)
+    *    c_name - which can be identical to c_uid -  will be used to uniquely identify entries
+    *    c_password - password of the user, plain-text, md5 or sha encoded for now
+    *    c_cn - the user's common name - such as "John Doe"
+    *    mail - the user's mail address
+    *  See the installation guide for more details
+    */
+   SOGoUserSources =
+     (
+       {
+         type = sql;
+         id = directory;
+         viewURL = "mysql://mailserver:{userpassword}@127.0.0.1:3306/mailserver/sogo_view";
+         canAuthenticate = YES;
+         isAddressBook = YES;
+         userPasswordAlgorithm = blf-crypt;
+       }
+     );
+ 
+   /* Web Interface */
+   SOGoPageTitle = "My Mail Server";
+   SOGoVacationEnabled = YES;
+   SOGoForwardEnabled = YES;
+   SOGoSieveScriptsEnabled = YES;
+   SOGoMailAuxiliaryUserAccountsEnabled = YES;
+   // SOGoTrustProxyAuthentication = NO;
+   //SOGoXSRFValidationEnabled = NO;
+ 
+   /* General - SOGoTimeZone *MUST* be defined */
+   SOGoLanguage = English;
+   SOGoTimeZone = Africa/Johannesburg;
+   //SOGoSuperUsernames = (sogo1, sogo2); // This is an array - keep the parens!
+   //SxVMemLimit = 384;
+   //WOPidFile = "/var/run/sogo/sogo.pid";
+   SOGoMemcachedHost = 127.0.0.1;
+   
+   /* Debug */
+   //SOGoDebugRequests = YES;
+   //SoDebugBaseURL = YES;
+   //ImapDebugEnabled = YES;
+   //LDAPDebugEnabled = YES;
+   //PGDebugEnabled = YES;
+   //MySQL4DebugEnabled = YES;
+   //SOGoUIxDebugEnabled = YES;
+   //WODontZipResponse = YES;
+   //WOLogFile = /var/log/sogo/sogo.log;
+ }
+ ```
+
+ 4. Restart SOGo
+ 
+ ```bash
+ systemctl restart sogo
+ ```
+ 
+ 5. Create a SOGo cofiguration file for Apache:
+
+ ```bash
+ nano /etc/apache2/conf-available/SOGo.conf
+ ```
+ And Paste the following in there (Note the RedirectMatch line and point to your fqnd, this makes the SOGo app the default app when brosing to https://mail.example.org):
+ ```bash
+ Alias /SOGo.woa/WebServerResources/ \
+       /usr/lib/GNUstep/SOGo/WebServerResources/
+ Alias /SOGo/WebServerResources/ \
+       /usr/lib/GNUstep/SOGo/WebServerResources/
+
+ <Directory /usr/lib/GNUstep/SOGo/>
+     AllowOverride None
+
+     <IfVersion < 2.4>
+         Order deny,allow
+         Allow from all
+     </IfVersion>
+     <IfVersion >= 2.4>
+         Require all granted
+     </IfVersion>
+
+     # Explicitly allow caching of static content to avoid browser specific behavior.
+     # A resource's URL MUST change in order to have the client load the new version.
+     <IfModule expires_module>
+       ExpiresActive On
+       ExpiresDefault "access plus 1 year"
+     </IfModule>
+ </Directory>
+
+ # Don't send the Referer header for cross-origin requests
+ Header always set Referrer-Policy "same-origin"
+
+ ## Uncomment the following to enable proxy-side authentication, you will then
+ ## need to set the "SOGoTrustProxyAuthentication" SOGo user default to YES and
+ ## adjust the "x-webobjects-remote-user" proxy header in the "Proxy" section
+ ## below.
+ #
+ ## For full proxy-side authentication:
+ #<Location /SOGo>
+ #  AuthType XXX
+ #  Require valid-user
+ #  SetEnv proxy-nokeepalive 1
+ #  Allow from all
+ #</Location>
+ #
+ ## For proxy-side authentication only for CardDAV and GroupDAV from external
+ ## clients:
+ #<Location /SOGo/dav>
+ #  AuthType XXX
+ #  Require valid-user
+ #  SetEnv proxy-nokeepalive 1
+ #  Allow from all
+ #</Location>
+
+ ProxyRequests Off
+ SetEnv proxy-nokeepalive 1
+ ProxyPreserveHost On
+
+ # When using CAS, you should uncomment this and install cas-proxy-validate.py
+ # in /usr/lib/cgi-bin to reduce server overloading
+ #
+ # ProxyPass /SOGo/casProxy http://localhost/cgi-bin/cas-proxy-validate.py
+ # <Proxy http://localhost/app/cas-proxy-validate.py>
+ #   Order deny,allow
+ #   Allow from your-cas-host-addr
+ # </Proxy>
+
+ # Redirect / to /SOGo
+ RedirectMatch ^/$ https://mail.example.org/SOGo
+
+ # Enable to use Microsoft ActiveSync support
+ # Note that you MUST have many sogod workers to use ActiveSync.
+ # See the SOGo Installation and Configuration guide for more details.
+ #
+ #ProxyPass /Microsoft-Server-ActiveSync \
+ # http://127.0.0.1:20000/SOGo/Microsoft-Server-ActiveSync \
+ # retry=60 connectiontimeout=5 timeout=360
+
+ ProxyPass /SOGo http://127.0.0.1:20000/SOGo retry=0 nocanon
+
+ <Proxy http://127.0.0.1:20000/SOGo>
+ ## Adjust the following to your configuration
+ ## and make sure to enable the headers module
+ <IfModule headers_module>
+   RequestHeader set "x-webobjects-server-port" "443"
+   SetEnvIf Host (.*) HTTP_HOST=$1
+   RequestHeader set "x-webobjects-server-name" "%{HTTP_HOST}e" env=HTTP_HOST
+   RequestHeader set "x-webobjects-server-url" "https://%{HTTP_HOST}e" env=HTTP_HOST
+
+ ## When using proxy-side autentication, you need to uncomment and
+ ## adjust the following line:
+   RequestHeader unset "x-webobjects-remote-user"
+ #  RequestHeader set "x-webobjects-remote-user" "%{REMOTE_USER}e" env=REMOTE_USER
+
+   RequestHeader set "x-webobjects-server-protocol" "HTTP/1.0"
+ </IfModule>
+
+   AddDefaultCharset UTF-8
+
+   Order allow,deny
+   Allow from all
+ </Proxy>
+
+ # For Apple autoconfiguration
+ <IfModule rewrite_module>
+   RewriteEngine On
+   RewriteRule ^/.well-known/caldav/?$ /SOGo/dav [R=301]
+   RewriteRule ^/.well-known/carddav/?$ /SOGo/dav [R=301]
+ </IfModule>
+ ```
+ 
+ 6. Enable the SOGo Apache configuration:
+
+ ```bash
+ a2enconf SOGo
+ ```
+ 
+ 7. Reload Apache Configuration
+
+ ```bash
+ systemctl reload apache2
+ ```
+
+ That is it, SOGo should now be accessible at https://mail.example.org/SOGo and you should be able to log in with any user created in postfixadmin.
