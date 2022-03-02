@@ -1266,7 +1266,7 @@ doveadm acl debug -u to_user@example.org shared/from_user@example.org indicates 
  ```
  Edit the mail_plugins section to resemble this:
  ```bash
- mail_plugins = $mail_plugins quota imap_acl acl
+ mail_plugins = $mail_plugins quota imap_sieve imap_acl acl
  ```
  
  7. Enable acl plugin in lmtp.conf
