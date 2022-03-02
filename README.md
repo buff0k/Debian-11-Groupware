@@ -75,7 +75,7 @@ apt update && apt upgrade -y
 This installs all the packages we require to get everything to work:
 
 ```bash
-apt install -y mariadb-server postfix postfix-mysql apache2 php php-imap php-mbstring php-mysql rspamd redis-server certbot dovecot-mysql dovecot-pop3d dovecot-imapd dovecot-managesieved dovecot-lmtpd sogo ca-certificates
+apt install -y mariadb-server postfix postfix-mysql apache2 php php-{imap,mbstring,mysql} rspamd redis-server certbot dovecot-mysql dovecot-pop3d dovecot-imapd dovecot-managesieved dovecot-lmtpd sogo ca-certificates
 ```
 
 ## Prepare MariaDB
