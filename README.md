@@ -182,7 +182,7 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  chown www-data:www-data /etc/letsencrypt/archive
  ```
  
- 9. Configure Certbot to restart the mailserver stach whenever the certificate is updated:
+ 9. Configure Certbot to restart the update ownership of the certificates and restart the mailserver whenever the certificate is updated:
 
  ```bash
  nano /etc/letsencrypt/cli.ini
@@ -190,7 +190,7 @@ Eventually I would like to move over to NginX for this, however deploying on Apa
  Add the following to the end of the file:
  
  ```bash
- post-hook = systemctl restart postfix dovecot apache2
+ post-hook = chown www-data:www-data /etc/letsencrypt/live/mail.example.org/privkey.pem && chown www-data:www-data /etc/letsencrypt/live && chown www-data:www-data /etc/letsencrypt/archive && systemctl restart postfix dovecot apache2
  ```
  
  10. Make a autoconfig-mail file (Works with Mozilla Thunderbird), if nothing else, to give you a reference when deploying users. Make a note of the contents of this file as well, these are the IMAP and SMTP client configurations we are going to configure later.
