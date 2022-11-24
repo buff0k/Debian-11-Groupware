@@ -302,7 +302,7 @@ Note, that since we haven't configured Dovevot to use the SSL certificates yet, 
  tar -zxvf postfixadmin.tgz
  ```
  ```bash
- mv postfixadmin-postfixadmin-3.3.10 /srv/postfixadmin
+ mv postfixadmin-postfixadmin-3.3.11 /srv/postfixadmin
  ```
  
  2. Create the required templates_c folder and give Apache privileges to write to it:
